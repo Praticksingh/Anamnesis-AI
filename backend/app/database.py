@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
+# Load backend/.env regardless of where uvicorn is launched from.
+backend_root = Path(__file__).resolve().parents[1]
+load_dotenv(backend_root / ".env")
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./anamnesis.db")

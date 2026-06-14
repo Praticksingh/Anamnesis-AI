@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import AsyncSessionLocal, create_tables, get_db
 from app.models import AgentOutput, FinalReport, Scenario
@@ -28,6 +29,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
+def _db_unavailable_exception() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail="Database unavailable. Check DATABASE_URL and ensure PostgreSQL is running.",
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001"],
@@ -48,12 +56,21 @@ async def create_scenario(
     background_tasks: BackgroundTasks,
     db=Depends(get_db),
 ) -> ScenarioCreateResponse:
-    scenario = Scenario(raw_input=request.raw_input, status="pending")
-    db.add(scenario)
-    await db.commit()
-    await db.refresh(scenario)
-    background_tasks.add_task(run_simulation_background, scenario.id)
-    return ScenarioCreateResponse(scenario_id=scenario.id)
+    try:
+        scenario = Scenario(raw_input=request.raw_input, status="pending")
+        db.add(scenario)
+        await db.commit()
+        await db.refresh(scenario)
+        background_tasks.add_task(run_simulation_background, scenario.id)
+        return ScenarioCreateResponse(scenario_id=scenario.id)
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        logger.exception("Database error while creating scenario")
+        raise _db_unavailable_exception()
+    except Exception:
+        logger.exception("Unexpected error while creating scenario")
+        raise _db_unavailable_exception()
 
 
 async def run_simulation_background(scenario_id: str):
@@ -121,17 +138,26 @@ async def get_scenario_status(
     scenario_id: str,
     db=Depends(get_db),
 ) -> ScenarioStatusResponse:
-    scenario = await db.get(Scenario, scenario_id)
-    if scenario is None:
-        raise HTTPException(status_code=404, detail="Scenario not found")
+    try:
+        scenario = await db.get(Scenario, scenario_id)
+        if scenario is None:
+            raise HTTPException(status_code=404, detail="Scenario not found")
 
-    result = await db.execute(select(AgentOutput.agent_name).where(AgentOutput.scenario_id == scenario_id))
-    completed_agents = [row[0] for row in result.all()]
-    return ScenarioStatusResponse(
-        status=scenario.status,
-        completed_agents=completed_agents,
-        error_message=scenario.error_message,
-    )
+        result = await db.execute(select(AgentOutput.agent_name).where(AgentOutput.scenario_id == scenario_id))
+        completed_agents = [row[0] for row in result.all()]
+        return ScenarioStatusResponse(
+            status=scenario.status,
+            completed_agents=completed_agents,
+            error_message=scenario.error_message,
+        )
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        logger.exception("Database error while getting scenario status")
+        raise _db_unavailable_exception()
+    except Exception:
+        logger.exception("Unexpected error while getting scenario status")
+        raise _db_unavailable_exception()
 
 
 @app.get("/api/scenarios/{scenario_id}/report", response_model=FinalReportSchema)
@@ -139,45 +165,54 @@ async def get_scenario_report(
     scenario_id: str,
     db=Depends(get_db),
 ) -> FinalReportSchema:
-    scenario = await db.get(Scenario, scenario_id)
-    if scenario is None:
-        raise HTTPException(status_code=404, detail="Scenario not found")
+    try:
+        scenario = await db.get(Scenario, scenario_id)
+        if scenario is None:
+            raise HTTPException(status_code=404, detail="Scenario not found")
 
-    if scenario.status != "done":
-        raise HTTPException(status_code=409, detail=f"Report not ready, current status: {scenario.status}")
+        if scenario.status != "done":
+            raise HTTPException(status_code=409, detail=f"Report not ready, current status: {scenario.status}")
 
-    result = await db.execute(select(FinalReport).where(FinalReport.scenario_id == scenario_id))
-    report = result.scalar_one_or_none()
-    if report is None:
-        raise HTTPException(status_code=500, detail="Final report is missing for a completed scenario")
+        result = await db.execute(select(FinalReport).where(FinalReport.scenario_id == scenario_id))
+        report = result.scalar_one_or_none()
+        if report is None:
+            raise HTTPException(status_code=500, detail="Final report is missing for a completed scenario")
 
-    agent_result = await db.execute(
-        select(AgentOutput).where(
-            AgentOutput.scenario_id == scenario_id,
-            AgentOutput.agent_name.in_(["historian", "economist", "technology", "society", "climate"]),
+        agent_result = await db.execute(
+            select(AgentOutput).where(
+                AgentOutput.scenario_id == scenario_id,
+                AgentOutput.agent_name.in_(["historian", "economist", "technology", "society", "climate"]),
+            )
         )
-    )
-    agent_rows = {agent_output.agent_name: agent_output for agent_output in agent_result.scalars().all()}
+        agent_rows = {agent_output.agent_name: agent_output for agent_output in agent_result.scalars().all()}
 
-    return FinalReportSchema.model_validate(
-        {
-            "scenario_summary": report.scenario_summary,
-            "alternate_timeline": report.alternate_timeline,
-            "agent_outputs": [
-                {
-                    "agent_name": agent_name,
-                    "analysis_text": agent_rows[agent_name].analysis_text,
-                    "timeline_events": agent_rows[agent_name].structured_data.get("timeline_events"),
-                    "impact_score": agent_rows[agent_name].structured_data.get("impact_score"),
-                }
-                for agent_name in ["historian", "economist", "technology", "society", "climate"]
-                if agent_name in agent_rows
-            ],
-            "impact_dashboard": report.impact_dashboard,
-            "confidence_score": report.confidence_score,
-            "confidence_explanation": report.confidence_explanation,
-            "risk_notes": report.risk_notes,
-            "sources_consulted": report.sources_consulted,
-            "retrieved_documents": report.retrieved_documents,
-        }
-    )
+        return FinalReportSchema.model_validate(
+            {
+                "scenario_summary": report.scenario_summary,
+                "alternate_timeline": report.alternate_timeline,
+                "agent_outputs": [
+                    {
+                        "agent_name": agent_name,
+                        "analysis_text": agent_rows[agent_name].analysis_text,
+                        "timeline_events": agent_rows[agent_name].structured_data.get("timeline_events"),
+                        "impact_score": agent_rows[agent_name].structured_data.get("impact_score"),
+                    }
+                    for agent_name in ["historian", "economist", "technology", "society", "climate"]
+                    if agent_name in agent_rows
+                ],
+                "impact_dashboard": report.impact_dashboard,
+                "confidence_score": report.confidence_score,
+                "confidence_explanation": report.confidence_explanation,
+                "risk_notes": report.risk_notes,
+                "sources_consulted": report.sources_consulted,
+                "retrieved_documents": report.retrieved_documents,
+            }
+        )
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        logger.exception("Database error while getting scenario report")
+        raise _db_unavailable_exception()
+    except Exception:
+        logger.exception("Unexpected error while getting scenario report")
+        raise _db_unavailable_exception()

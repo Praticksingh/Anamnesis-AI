@@ -4,6 +4,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
 export class ReportNotReadyError extends Error {}
 
+async function buildApiError(response: Response): Promise<Error> {
+  let detail = response.statusText;
+
+  try {
+    const payload = await response.json();
+    if (typeof payload?.detail === "string" && payload.detail.trim()) {
+      detail = payload.detail;
+    }
+  } catch {
+    // Keep fallback status text when response has no JSON body.
+  }
+
+  return new Error(detail || "Request failed.");
+}
+
 export async function createScenario(rawInput: string): Promise<{ scenario_id: string }> {
   const response = await fetch(`${API_BASE}/api/scenarios`, {
     method: "POST",
@@ -14,7 +29,7 @@ export async function createScenario(rawInput: string): Promise<{ scenario_id: s
   });
 
   if (!response.ok) {
-    throw new Error(response.statusText);
+    throw await buildApiError(response);
   }
 
   return response.json();
@@ -24,7 +39,7 @@ export async function getScenarioStatus(id: string): Promise<ScenarioStatusRespo
   const response = await fetch(`${API_BASE}/api/scenarios/${id}/status`);
 
   if (!response.ok) {
-    throw new Error(response.statusText);
+    throw await buildApiError(response);
   }
 
   return response.json();
@@ -38,7 +53,7 @@ export async function getScenarioReport(id: string): Promise<FinalReport> {
   }
 
   if (!response.ok) {
-    throw new Error(response.statusText);
+    throw await buildApiError(response);
   }
 
   return response.json();

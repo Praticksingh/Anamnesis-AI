@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import FloatingLauncher from "../components/FloatingLauncher";
 
 export const metadata: Metadata = {
   title: "Anamnesis-AI — Alternate Reality Lab",
@@ -21,6 +22,7 @@ export default function RootLayout({
         <div className="flex-grow pt-16">
           {children}
         </div>
+        <FloatingLauncher />
         <Footer />
       </body>
     </html>

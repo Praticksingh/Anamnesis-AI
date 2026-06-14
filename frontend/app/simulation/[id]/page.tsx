@@ -2,38 +2,86 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, useRef } from "react";
+import { Terminal as TerminalIcon, AlertTriangle, ArrowLeft, RefreshCw, Cpu } from "lucide-react";
 import { getScenarioStatus } from "../../../lib/api";
 import type { ScenarioStatusResponse } from "../../../lib/types";
 
 const AGENTS = [
-  { key: "historian", label: "Historian Agent", description: "Analyzing historical timeline..." },
-  { key: "climate", label: "Climate Agent", description: "Analyzing carbon, rainfall, temperature, and biodiversity..." },
-  { key: "economist", label: "Economist Agent", description: "Calculating macroeconomic impact..." },
-  { key: "technology", label: "Technology Agent", description: "Simulating alternate innovation path..." },
-  { key: "society", label: "Society Agent", description: "Modeling social and cultural shifts..." },
-  { key: "critic", label: "Critic Agent", description: "Reviewing consistency and confidence..." }
+  { key: "historian", label: "Historian Agent", description: "Tracing divergence pivot points and chronological shifts." },
+  { key: "climate", label: "Climate Agent", description: "Modeling precipitation, carbon sequestration, and biodiversity." },
+  { key: "economist", label: "Economist Agent", description: "Simulating labor transitions, trade flows, and GDP variance." },
+  { key: "technology", label: "Technology Agent", description: "Projecting alternate hardware/software engineering paths." },
+  { key: "society", label: "Society Agent", description: "Tracing vocational shifts, demographics, and cultural dynamics." },
+  { key: "critic", label: "Critic Agent", description: "Validating logic for internal timeline contradictions." }
 ];
 
-const INITIAL_STATUS: ScenarioStatusResponse = {
-  status: "pending",
-  completed_agents: [],
-  error_message: null
+const AGENT_LOGS: Record<string, string[]> = {
+  historian: [
+    "Historian │ Initializing alternate timeline graph...",
+    "Historian │ Querying RAG database for historical baselines...",
+    "Historian │ Divergence vector identified, branching nodes...",
+    "Historian │ Tracing geopolitical border modifications...",
+    "Historian │ Timeline events successfully resolved and persisted."
+  ],
+  climate: [
+    "Climate   │ Booting climate feedback simulation mesh...",
+    "Climate   │ Fetching atmospheric carbon baseline...",
+    "Climate   │ Simulating precipitation shifts and regional cooling...",
+    "Climate   │ Computing forestry biodiversity impact indices...",
+    "Climate   │ Climate model complete. Output score formatted."
+  ],
+  economist: [
+    "Economist │ Seeding macroeconomic equations...",
+    "Economist │ Analyzing resource trade friction shifts...",
+    "Economist │ Calculating white-collar labor transition rates...",
+    "Economist │ Simulating sovereign wealth distribution changes...",
+    "Economist │ Economic model calculations finalized."
+  ],
+  technology: [
+    "Technology│ Scanning active computing blueprints...",
+    "Technology│ Evaluating alternative material hardware constraints...",
+    "Technology│ Simulating R&D trajectory shifts...",
+    "Technology│ Analyzing energy grids and data center consumption...",
+    "Technology│ Tech timeline vectors compiled."
+  ],
+  society: [
+    "Society   │ Seeding community media cooperatives data...",
+    "Society   │ Simulating vocational identity friction index...",
+    "Society   │ Tracing global migration adjustments...",
+    "Society   │ Projecting regional urbanization flows...",
+    "Society   │ Social Realignment data validated."
+  ],
+  critic: [
+    "Critic    │ Performing semantic audits across all outputs...",
+    "Critic    │ Searching for timeline year contradictions...",
+    "Critic    │ Grading assumptions and structural variances...",
+    "Critic    │ Formulating risk logs and final confidence metrics...",
+    "Critic    │ Consistency checks finished. Resolving to report."
+  ]
 };
 
-export default function SimulationPage() {
+export default function SimulationStatusPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [status, setStatus] = useState<ScenarioStatusResponse>(INITIAL_STATUS);
+  const [status, setStatus] = useState<ScenarioStatusResponse>({
+    status: "pending",
+    completed_agents: [],
+    error_message: null
+  });
   const [loadError, setLoadError] = useState("");
+  const [consoleLogs, setConsoleLogs] = useState<string[]>(["[system] Initializing simulation workspace...", "[system] Connected to server. Preparing multi-agent pipeline..."]);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
 
   const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
 
+  // Auto scroll terminal to bottom
   useEffect(() => {
-    if (!id) {
-      return;
-    }
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [consoleLogs]);
+
+  useEffect(() => {
+    if (!id) return;
 
     let active = true;
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -41,29 +89,34 @@ export default function SimulationPage() {
     const fetchStatus = async () => {
       try {
         const nextStatus = await getScenarioStatus(id);
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
-        setStatus(nextStatus);
+        setStatus((prev) => {
+          // If a new agent completed, trigger console logging for it
+          nextStatus.completed_agents.forEach((agent) => {
+            if (!prev.completed_agents.includes(agent)) {
+              const logs = AGENT_LOGS[agent] || [];
+              setConsoleLogs((l) => [...l, ...logs, `[system] ${agent.toUpperCase()} agent completed execution successfully.`]);
+            }
+          });
+          return nextStatus;
+        });
         setLoadError("");
 
         if (nextStatus.status === "done") {
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-          router.push(`/report/${id}`);
+          if (intervalId) clearInterval(intervalId);
+          setTimeout(() => {
+            router.push(`/report/${id}`);
+          }, 1500); // Small pause for user to read final terminal console lines
         }
 
         if (nextStatus.status === "error" && intervalId) {
           clearInterval(intervalId);
+          setConsoleLogs((l) => [...l, `[error] Simulation aborted. Reason: ${nextStatus.error_message}`]);
         }
-      } catch (error) {
-        if (!active) {
-          return;
-        }
-
-        setLoadError(error instanceof Error ? error.message : "Failed to load simulation status.");
+      } catch (err) {
+        if (!active) return;
+        setLoadError(err instanceof Error ? err.message : "Failed to load simulation status.");
       }
     };
 
@@ -74,113 +127,134 @@ export default function SimulationPage() {
 
     return () => {
       active = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      if (intervalId) clearInterval(intervalId);
     };
   }, [id, router]);
 
   const completedAgents = status.completed_agents;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/80 text-white selection:bg-cyan-500/30">
-      <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-16">
-        <div className="rounded-2xl glass-panel p-8 sm:p-10 shadow-2xl animate-fade-in-up">
-          <div className="mb-8 space-y-3 text-center">
-            <h1 className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl drop-shadow-sm">
-              Anamnesis-AI
-            </h1>
-            <p className="text-slate-300 font-light tracking-wide">Live simulation status for scenario {id}</p>
+    <main className="min-h-screen bg-black px-4 sm:px-6 py-12 relative select-none">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Navigation / Header */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/simulation"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to config
+          </Link>
+          <div className="flex items-center gap-2 text-mono-label text-slate-500">
+            <Cpu className="h-3.5 w-3.5" />
+            <span>Scenario ID: {id.slice(0, 8)}...</span>
+          </div>
+        </div>
+
+        {/* Layout Grid */}
+        <div className="grid gap-8 lg:grid-cols-12">
+          {/* Left: Agents Status Cards */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                Research Pipeline
+              </h1>
+              <p className="text-xs text-slate-400 font-light">
+                Monitoring live outputs and token exchanges from active reasoning layers.
+              </p>
+            </div>
+
+            {status.status === "error" && (
+              <div className="flex gap-3 rounded-xl border border-rose-500/25 bg-rose-500/5 p-5 animate-fade-in-up">
+                <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-rose-200">Simulation Aborted</p>
+                  <p className="text-xs text-rose-300/80 leading-5">
+                    {status.error_message || loadError || "An unexpected processing error occurred."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {AGENTS.map((agent, idx) => {
+                const isCompleted = completedAgents.includes(agent.key);
+                const isCurrent =
+                  status.status === "running" &&
+                  !isCompleted &&
+                  AGENTS.slice(0, idx).every((item) => completedAgents.includes(item.key));
+                const isAborted = status.status === "error" && !isCompleted;
+
+                let stateLabel = "Pending";
+                let cardClass = "border-white/5 bg-slate-950/25 text-slate-500";
+                let glowClass = "";
+
+                if (isCompleted) {
+                  stateLabel = "Completed";
+                  cardClass = "border-emerald-500/20 bg-emerald-500/5 text-emerald-300";
+                } else if (isCurrent) {
+                  stateLabel = "Processing";
+                  cardClass = "border-cyan-500/25 bg-cyan-500/5 text-cyan-200";
+                  glowClass = "glow-pulse";
+                } else if (isAborted) {
+                  stateLabel = "Aborted";
+                  cardClass = "border-rose-500/15 bg-rose-500/5 text-rose-400/60";
+                }
+
+                return (
+                  <div
+                    key={agent.key}
+                    className={`flex items-center gap-4 rounded-xl border px-5 py-4 transition-all duration-300 ${cardClass} ${glowClass}`}
+                  >
+                    <div className="shrink-0 flex items-center justify-center">
+                      {isCompleted ? (
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                      ) : isCurrent ? (
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] animate-ping" />
+                      ) : (
+                        <span className="h-2 w-2 rounded-full bg-slate-800" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-grow">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-white tracking-wide">{agent.label}</h4>
+                        <span className="text-[9px] uppercase font-bold tracking-widest">{stateLabel}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 font-light leading-5">{agent.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {status.status === "error" ? (
-            <div className="space-y-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center animate-fade-in-up">
-              <p className="text-lg font-semibold text-rose-200">Simulation failed</p>
-              <p className="text-sm text-rose-100/90">{status.error_message || loadError || "An unexpected error occurred."}</p>
-              <div>
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center rounded-xl bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/15 active:scale-[0.98]"
-                >
-                  Back to Home
-                </Link>
-              </div>
+          {/* Right: Scrolling Console Terminal */}
+          <div className="lg:col-span-5 flex flex-col h-[520px] rounded-2xl border border-white/5 bg-[#070708] p-5 shadow-2xl">
+            <div className="flex items-center gap-2 pb-3 border-b border-white/5 text-slate-400">
+              <TerminalIcon className="h-4.5 w-4.5 text-cyan-400" />
+              <span className="text-[10px] uppercase font-bold tracking-widest font-mono">Telemetry Logs</span>
             </div>
-          ) : null}
 
-          {loadError && status.status !== "error" ? (
-            <div className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-              {loadError}
+            <div className="flex-grow overflow-y-auto font-mono text-[10px] leading-5 text-slate-400 py-4 space-y-1">
+              {consoleLogs.map((log, index) => {
+                let colorClass = "text-slate-500";
+                if (log.startsWith("[system]")) colorClass = "text-cyan-400";
+                else if (log.startsWith("[error]")) colorClass = "text-rose-400";
+                else if (log.includes("completed")) colorClass = "text-emerald-400";
+                else if (log.includes("│")) colorClass = "text-slate-300";
+
+                return (
+                  <div key={index} className={colorClass}>
+                    {log}
+                  </div>
+                );
+              })}
+              <div ref={terminalEndRef} />
             </div>
-          ) : null}
 
-          <div className="space-y-4">
-            {AGENTS.map((agent, index) => {
-              const isCompleted = completedAgents.includes(agent.key);
-              const isCurrent =
-                status.status === "running" && !isCompleted && AGENTS.slice(0, index).every((item) => completedAgents.includes(item.key));
-              const isErroredButReached = status.status === "error" && isCompleted;
-              const isErroredNotReached = status.status === "error" && !isCompleted;
-
-              let indicator = (
-                <div className="h-3.5 w-3.5 rounded-full bg-slate-500/60" />
-              );
-              let statusLabel = "Waiting";
-              let rowTone = "border-white/5 bg-slate-900/20 text-slate-400";
-              let pulseClass = "";
-
-              if (isCompleted || isErroredButReached) {
-                indicator = (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-400">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.704 5.296a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                );
-                statusLabel = "Completed";
-                rowTone = "border-emerald-500/25 bg-emerald-500/10 text-emerald-100";
-              } else if (isCurrent) {
-                indicator = (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-300">
-                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
-                  </div>
-                );
-                statusLabel = "Processing...";
-                rowTone = "border-cyan-400/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_15px_rgba(34,211,238,0.1)]";
-                pulseClass = "glow-pulse";
-              } else if (isErroredNotReached) {
-                indicator = (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10A8 8 0 11.001 10 8 8 0 0118 10zm-8.707-3.707a1 1 0 10-1.414 1.414L8.586 10l-.707.707a1 1 0 101.414 1.414L10 11.414l.707.707a1 1 0 001.414-1.414L11.414 10l.707-.707a1 1 0 00-1.414-1.414L10 8.586l-.707-.707z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                );
-                statusLabel = "Aborted";
-                rowTone = "border-rose-500/20 bg-rose-500/5 text-rose-200/70";
-              }
-
-              return (
-                <div key={agent.key} className={`flex items-center gap-4 rounded-xl border px-5 py-4 transition duration-300 ${rowTone} ${pulseClass}`}>
-                  <div className="shrink-0">{indicator}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="font-semibold text-white tracking-wide">{agent.label}</p>
-                      <span className="text-[10px] uppercase font-bold tracking-[0.2em]">{statusLabel}</span>
-                    </div>
-                    <p className="mt-1 text-sm font-light text-slate-300">{agent.description}</p>
-                  </div>
-                </div>
-              );
-            })}
+            <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-600">
+              <span>Streaming: websocket://localhost:8001</span>
+              {status.status === "running" && <RefreshCw className="h-3 w-3 animate-spin" />}
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -6,12 +7,9 @@ from sqlalchemy.orm import DeclarativeBase
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./anamnesis.db")
 
-if not DATABASE_URL:
-	raise RuntimeError("DATABASE_URL is not set")
-
-engine = create_async_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -22,3 +20,9 @@ class Base(DeclarativeBase):
 async def get_db():
 	async with AsyncSessionLocal() as session:
 		yield session
+
+
+async def create_tables():
+	"""Create all tables in the database (for local dev, replaces Alembic migrations)."""
+	async with engine.begin() as conn:
+		await conn.run_sync(Base.metadata.create_all)

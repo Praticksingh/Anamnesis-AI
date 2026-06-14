@@ -3,28 +3,95 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
+  background-color: #020617; /* Slate-950 */
 }
 
 body {
   min-height: 100vh;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Glassmorphism Styles */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.45); /* Slate-900 with opacity */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.3); /* Slate-800 with opacity */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Hover glow effects */
+.hover-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 211, 238, 0.3); /* Cyan border */
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
+}
+
+/* Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Timeline animations */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Pulse animation for current processing agents */
+.glow-pulse {
+  box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4);
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 211, 238, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
   }
 }

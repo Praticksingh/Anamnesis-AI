@@ -1,11 +1,11 @@
 import logging
-from uuid import UUID
+from contextlib import asynccontextmanager
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
-from app.database import AsyncSessionLocal, get_db
+from app.database import AsyncSessionLocal, create_tables, get_db
 from app.models import AgentOutput, FinalReport, Scenario
 from app.orchestrator import run_simulation_graph
 from app.schemas import (
@@ -15,12 +15,22 @@ from app.schemas import (
     ScenarioStatusResponse,
 )
 
-app = FastAPI()
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Skip Alembic, run automatic SQLAlchemy table creation on startup
+    await create_tables()
+    logger.info("Database tables created / verified")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,7 +56,7 @@ async def create_scenario(
     return ScenarioCreateResponse(scenario_id=scenario.id)
 
 
-async def run_simulation_background(scenario_id: UUID):
+async def run_simulation_background(scenario_id: str):
     async with AsyncSessionLocal() as db:
         try:
             scenario = await db.get(Scenario, scenario_id)
@@ -62,6 +72,32 @@ async def run_simulation_background(scenario_id: UUID):
                 scenario.error_message = result["error"]
                 await db.commit()
                 return
+
+            # Save individual agent outputs to AgentOutput table
+            agent_mappings = [
+                ("historian_output", "historian"),
+                ("economist_output", "economist"),
+                ("technology_output", "technology"),
+                ("society_output", "society"),
+                ("climate_output", "climate"),
+            ]
+            for state_key, agent_name in agent_mappings:
+                output_val = result.get(state_key)
+                if output_val:
+                    timeline_list = []
+                    for ev in output_val.timeline_events:
+                        timeline_list.append({"year": ev.year, "event": ev.event})
+                    
+                    s_data = {"timeline_events": timeline_list}
+                    if hasattr(output_val, "impact_score"):
+                        s_data["impact_score"] = output_val.impact_score
+
+                    db.add(AgentOutput(
+                        scenario_id=scenario.id,
+                        agent_name=agent_name,
+                        analysis_text=output_val.analysis_text,
+                        structured_data=s_data,
+                    ))
 
             final_report = result["final_report"].model_dump(exclude={"agent_outputs"})
             db.add(FinalReport(scenario_id=scenario.id, **final_report))
@@ -82,7 +118,7 @@ async def run_simulation_background(scenario_id: UUID):
 
 @app.get("/api/scenarios/{scenario_id}/status", response_model=ScenarioStatusResponse)
 async def get_scenario_status(
-    scenario_id: UUID,
+    scenario_id: str,
     db=Depends(get_db),
 ) -> ScenarioStatusResponse:
     scenario = await db.get(Scenario, scenario_id)
@@ -100,7 +136,7 @@ async def get_scenario_status(
 
 @app.get("/api/scenarios/{scenario_id}/report", response_model=FinalReportSchema)
 async def get_scenario_report(
-    scenario_id: UUID,
+    scenario_id: str,
     db=Depends(get_db),
 ) -> FinalReportSchema:
     scenario = await db.get(Scenario, scenario_id)
@@ -118,7 +154,7 @@ async def get_scenario_report(
     agent_result = await db.execute(
         select(AgentOutput).where(
             AgentOutput.scenario_id == scenario_id,
-            AgentOutput.agent_name.in_(["historian", "economist", "technology", "society"]),
+            AgentOutput.agent_name.in_(["historian", "economist", "technology", "society", "climate"]),
         )
     )
     agent_rows = {agent_output.agent_name: agent_output for agent_output in agent_result.scalars().all()}
@@ -134,11 +170,14 @@ async def get_scenario_report(
                     "timeline_events": agent_rows[agent_name].structured_data.get("timeline_events"),
                     "impact_score": agent_rows[agent_name].structured_data.get("impact_score"),
                 }
-                for agent_name in ["historian", "economist", "technology", "society"]
+                for agent_name in ["historian", "economist", "technology", "society", "climate"]
                 if agent_name in agent_rows
             ],
             "impact_dashboard": report.impact_dashboard,
             "confidence_score": report.confidence_score,
+            "confidence_explanation": report.confidence_explanation,
             "risk_notes": report.risk_notes,
+            "sources_consulted": report.sources_consulted,
+            "retrieved_documents": report.retrieved_documents,
         }
     )

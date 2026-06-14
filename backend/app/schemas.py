@@ -1,5 +1,4 @@
 from typing import Literal
-from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -14,6 +13,13 @@ class ImpactDashboard(BaseModel):
 	technology: int
 	society: int
 	politics: int
+	climate: int
+
+
+class UnifiedTimelineEvent(BaseModel):
+	year: int
+	event: str
+	source_agent: str
 
 
 class ScenarioContext(BaseModel):
@@ -50,8 +56,16 @@ class SocietyOutput(BaseModel):
 	impact_score: int
 
 
+class ClimateOutput(BaseModel):
+	agent_name: Literal["climate"] = "climate"
+	analysis_text: str
+	timeline_events: list[TimelineEvent]
+	impact_score: int
+
+
 class CriticOutput(BaseModel):
 	confidence_score: int
+	confidence_explanation: str
 	risk_notes: list[str]
 
 
@@ -60,7 +74,7 @@ class ScenarioCreateRequest(BaseModel):
 
 
 class ScenarioCreateResponse(BaseModel):
-	scenario_id: UUID
+	scenario_id: str
 
 
 class ScenarioStatusResponse(BaseModel):
@@ -78,8 +92,11 @@ class AgentOutputSummary(BaseModel):
 
 class FinalReportSchema(BaseModel):
 	scenario_summary: str
-	alternate_timeline: list[TimelineEvent]
+	alternate_timeline: list[UnifiedTimelineEvent]
 	agent_outputs: list[AgentOutputSummary]
 	impact_dashboard: ImpactDashboard
 	confidence_score: int
+	confidence_explanation: str
 	risk_notes: list[str]
+	sources_consulted: list[str]
+	retrieved_documents: list[str]

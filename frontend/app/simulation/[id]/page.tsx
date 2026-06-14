@@ -9,6 +9,7 @@ import type { ScenarioStatusResponse } from "../../../lib/types";
 
 const AGENTS = [
   { key: "historian", label: "Historian Agent", description: "Analyzing historical timeline..." },
+  { key: "climate", label: "Climate Agent", description: "Analyzing carbon, rainfall, temperature, and biodiversity..." },
   { key: "economist", label: "Economist Agent", description: "Calculating macroeconomic impact..." },
   { key: "technology", label: "Technology Agent", description: "Simulating alternate innovation path..." },
   { key: "society", label: "Society Agent", description: "Modeling social and cultural shifts..." },
@@ -82,24 +83,24 @@ export default function SimulationPage() {
   const completedAgents = status.completed_agents;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/80 text-white selection:bg-cyan-500/30">
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-16">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-md sm:p-10">
+        <div className="rounded-2xl glass-panel p-8 sm:p-10 shadow-2xl animate-fade-in-up">
           <div className="mb-8 space-y-3 text-center">
-            <h1 className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl">
+            <h1 className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl drop-shadow-sm">
               Anamnesis-AI
             </h1>
-            <p className="text-slate-300">Live simulation status for scenario {id}</p>
+            <p className="text-slate-300 font-light tracking-wide">Live simulation status for scenario {id}</p>
           </div>
 
           {status.status === "error" ? (
-            <div className="space-y-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center">
+            <div className="space-y-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center animate-fade-in-up">
               <p className="text-lg font-semibold text-rose-200">Simulation failed</p>
               <p className="text-sm text-rose-100/90">{status.error_message || loadError || "An unexpected error occurred."}</p>
               <div>
                 <Link
                   href="/"
-                  className="inline-flex items-center justify-center rounded-xl bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/15"
+                  className="inline-flex items-center justify-center rounded-xl bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/15 active:scale-[0.98]"
                 >
                   Back to Home
                 </Link>
@@ -125,11 +126,12 @@ export default function SimulationPage() {
                 <div className="h-3.5 w-3.5 rounded-full bg-slate-500/60" />
               );
               let statusLabel = "Waiting";
-              let rowTone = "border-white/10 bg-white/5 text-slate-300";
+              let rowTone = "border-white/5 bg-slate-900/20 text-slate-400";
+              let pulseClass = "";
 
               if (isCompleted || isErroredButReached) {
                 indicator = (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-400">
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                       <path
                         fillRule="evenodd"
@@ -139,19 +141,20 @@ export default function SimulationPage() {
                     </svg>
                   </div>
                 );
-                statusLabel = "Done";
-                rowTone = "border-emerald-500/20 bg-emerald-500/10 text-emerald-100";
+                statusLabel = "Completed";
+                rowTone = "border-emerald-500/25 bg-emerald-500/10 text-emerald-100";
               } else if (isCurrent) {
                 indicator = (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-300">
-                    <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
                   </div>
                 );
-                statusLabel = "Analyzing...";
-                rowTone = "border-cyan-400/20 bg-cyan-400/10 text-cyan-100";
+                statusLabel = "Processing...";
+                rowTone = "border-cyan-400/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_15px_rgba(34,211,238,0.1)]";
+                pulseClass = "glow-pulse";
               } else if (isErroredNotReached) {
                 indicator = (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                       <path
                         fillRule="evenodd"
@@ -161,19 +164,19 @@ export default function SimulationPage() {
                     </svg>
                   </div>
                 );
-                statusLabel = "Not reached";
-                rowTone = "border-rose-500/20 bg-rose-500/10 text-rose-100";
+                statusLabel = "Aborted";
+                rowTone = "border-rose-500/20 bg-rose-500/5 text-rose-200/70";
               }
 
               return (
-                <div key={agent.key} className={`flex items-center gap-4 rounded-xl border px-4 py-4 backdrop-blur-md ${rowTone}`}>
+                <div key={agent.key} className={`flex items-center gap-4 rounded-xl border px-5 py-4 transition duration-300 ${rowTone} ${pulseClass}`}>
                   <div className="shrink-0">{indicator}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="font-medium text-white">{agent.label}</p>
-                      <span className="text-xs uppercase tracking-[0.24em] text-slate-400">{statusLabel}</span>
+                      <p className="font-semibold text-white tracking-wide">{agent.label}</p>
+                      <span className="text-[10px] uppercase font-bold tracking-[0.2em]">{statusLabel}</span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-300">{agent.description}</p>
+                    <p className="mt-1 text-sm font-light text-slate-300">{agent.description}</p>
                   </div>
                 </div>
               );

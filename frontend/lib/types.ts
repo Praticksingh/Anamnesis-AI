@@ -1,6 +1,7 @@
 export interface TimelineEvent {
   year: number;
   event: string;
+  source_agent: string;
 }
 
 export interface ImpactDashboard {
@@ -8,6 +9,7 @@ export interface ImpactDashboard {
   technology: number;
   society: number;
   politics: number;
+  climate: number;
 }
 
 export interface AgentOutputSummary {
@@ -23,7 +25,10 @@ export interface FinalReport {
   agent_outputs: AgentOutputSummary[];
   impact_dashboard: ImpactDashboard;
   confidence_score: number;
+  confidence_explanation: string;
   risk_notes: string[];
+  sources_consulted: string[];
+  retrieved_documents: string[];
 }
 
 export type ScenarioStatus = "pending" | "running" | "done" | "error";

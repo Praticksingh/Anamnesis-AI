@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from app.llm_client import AgentResponseError, call_agent
 from app.prompts import CRITIC_PROMPT
-from app.schemas import CriticOutput, EconomistOutput, HistorianOutput, SocietyOutput, TechnologyOutput
+from app.schemas import CriticOutput, EconomistOutput, HistorianOutput, SocietyOutput, TechnologyOutput, ClimateOutput
 
 
 async def run_critic(
@@ -12,12 +12,14 @@ async def run_critic(
 	economist: EconomistOutput,
 	technology: TechnologyOutput,
 	society: SocietyOutput,
+	climate: ClimateOutput,
 ) -> CriticOutput:
 	payload = {
 		"historian": historian.model_dump(),
 		"economist": economist.model_dump(),
 		"technology": technology.model_dump(),
 		"society": society.model_dump(),
+		"climate": climate.model_dump(),
 	}
 	result = await call_agent(CRITIC_PROMPT, json.dumps(payload))
 	try:

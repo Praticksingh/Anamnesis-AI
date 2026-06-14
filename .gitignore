@@ -5,3 +5,6 @@ __pycache__/
 .venv/
 .env
 .env.local
+*.db
+chroma_db/
+verify_report.json

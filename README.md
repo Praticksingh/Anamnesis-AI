@@ -272,6 +272,18 @@ Quick health check:
 powershell -Command "(Invoke-WebRequest -Uri http://127.0.0.1:8000/ -UseBasicParsing).Content"
 ```
 
+### Backend Troubleshooting
+
+- If `POST /api/scenarios` returns `503`, database connection is unavailable.
+- Verify `backend/.env` contains a valid `DATABASE_URL`.
+- Ensure PostgreSQL is running and reachable from your machine.
+
+Windows service check:
+
+```bash
+powershell -Command "Get-Service | Where-Object { $_.Name -match 'postgres' -or $_.DisplayName -match 'postgres' } | Select-Object Name,DisplayName,Status | Format-Table -AutoSize"
+```
+
 ## Run the Frontend
 
 From `/frontend`:

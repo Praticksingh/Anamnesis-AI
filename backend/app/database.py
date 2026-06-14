@@ -11,8 +11,11 @@ load_dotenv(backend_root / ".env")
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./anamnesis.db")
+engine_kwargs = {}
+if DATABASE_URL.startswith("postgresql+asyncpg"):
+    engine_kwargs["connect_args"] = {"timeout": 5}
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(DATABASE_URL, echo=False, **engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 

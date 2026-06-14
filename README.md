@@ -240,13 +240,36 @@ Anamnesis-AI provides simulated, AI-generated outcomes based on available data a
 
 ## Run the Backend
 
+Prerequisites:
+
+- PostgreSQL running and reachable
+- `DATABASE_URL` set in `.env`
+
 From `/backend`:
 
 ```bash
 python -m venv .venv
 .venv\\Scripts\\activate
 pip install -r requirements.txt
+copy .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
+```
+
+From workspace root (alternative):
+
+```bash
+.venv\\Scripts\\activate
+pip install -r requirements.txt
+copy backend\\.env.example backend\\.env
+alembic -c backend\\alembic.ini upgrade head
+uvicorn app.main:app --reload --port 8000 --app-dir backend
+```
+
+Quick health check:
+
+```bash
+powershell -Command "(Invoke-WebRequest -Uri http://127.0.0.1:8000/ -UseBasicParsing).Content"
 ```
 
 ## Run the Frontend

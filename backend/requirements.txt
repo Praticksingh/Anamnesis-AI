@@ -1,0 +1,9 @@
+fastapi>=0,<1
+uvicorn[standard]>=0,<1
+sqlalchemy[asyncio]>=2,<3
+asyncpg>=0,<1
+alembic>=1,<2
+anthropic>=0,<1
+pydantic>=2,<3
+python-dotenv>=1,<2
+langgraph>=0,<1

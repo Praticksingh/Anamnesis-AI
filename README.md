@@ -237,3 +237,23 @@ It enables users to:
 Anamnesis-AI provides simulated, AI-generated outcomes based on available data and probabilistic reasoning. It is intended for educational and exploratory purposes only and should not be treated as factual prediction or guaranteed forecasting.
 
 ---
+
+## Run the Backend
+
+From `/backend`:
+
+```bash
+python -m venv .venv
+.venv\\Scripts\\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+## Run the Frontend
+
+From `/frontend`:
+
+```bash
+npm install
+npm run dev
+```

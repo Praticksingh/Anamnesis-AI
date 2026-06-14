@@ -1,0 +1,57 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check PostgreSQL service",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-Service | Where-Object { $_.Name -match 'postgres' -or $_.DisplayName -match 'postgres' } | Select-Object Name,DisplayName,Status | Format-Table -AutoSize"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Inspect PostgreSQL service",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-Service | Where-Object { $_.Name -match \"postgres\" -or $_.DisplayName -match \"postgres\" } | Select-Object Name,DisplayName,Status | Format-Table -AutoSize"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Inspect PostgreSQL service wildcard",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-Service | Where-Object { $_.Name -like *postgres* -or $_.DisplayName -like *postgres* } | Select-Object Name,DisplayName,Status | Format-Table -AutoSize"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Diagnose PostgreSQL",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"backend\\diagnose_postgres.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

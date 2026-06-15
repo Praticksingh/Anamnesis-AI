@@ -7,3 +7,4 @@ anthropic>=0,<1
 pydantic>=2,<3
 python-dotenv>=1,<2
 langgraph>=0,<1
+aiosqlite>=1,<2

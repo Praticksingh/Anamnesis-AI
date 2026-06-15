@@ -251,37 +251,7 @@ From `/backend`:
 python -m venv .venv
 .venv\\Scripts\\activate
 pip install -r requirements.txt
-copy .env.example .env
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
-```
-
-From workspace root (alternative):
-
-```bash
-.venv\\Scripts\\activate
-pip install -r requirements.txt
-copy backend\\.env.example backend\\.env
-alembic -c backend\\alembic.ini upgrade head
-uvicorn app.main:app --reload --port 8000 --app-dir backend
-```
-
-Quick health check:
-
-```bash
-powershell -Command "(Invoke-WebRequest -Uri http://127.0.0.1:8000/ -UseBasicParsing).Content"
-```
-
-### Backend Troubleshooting
-
-- If `POST /api/scenarios` returns `503`, database connection is unavailable.
-- Verify `backend/.env` contains a valid `DATABASE_URL`.
-- Ensure PostgreSQL is running and reachable from your machine.
-
-Windows service check:
-
-```bash
-powershell -Command "Get-Service | Where-Object { $_.Name -match 'postgres' -or $_.DisplayName -match 'postgres' } | Select-Object Name,DisplayName,Status | Format-Table -AutoSize"
+.venv\Scripts\uvicorn.exe app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir backend
 ```
 
 ## Run the Frontend

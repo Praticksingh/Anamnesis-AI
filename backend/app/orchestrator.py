@@ -52,9 +52,13 @@ class GraphState(TypedDict, total=False):
 
 async def parse_scenario(state: GraphState) -> dict:
 	try:
+		# First, obtain the structured scenario context via the existing LLM call
 		result = await call_agent(ORCHESTRATOR_PARSE_PROMPT, state["raw_input"])
 		context = ScenarioContext.model_validate(result)
-		return {"scenario_context": context}
+		# THEN request a factual snippet from Microsoft Foundry IQ using the raw input
+		from app.rag.foundry_iq import fetch_context
+		foundry_snippet = await fetch_context(state["raw_input"])
+		return {"scenario_context": context, "foundry_context": foundry_snippet}
 	except (AgentResponseError, ValidationError) as exc:
 		return {"error": str(exc)}
 

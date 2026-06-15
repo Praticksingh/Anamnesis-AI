@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   BookOpen, Globe, TrendingUp, Cpu, Users, ShieldCheck, FileText, 
   ArrowRight, CheckCircle2, Play, Terminal, HelpCircle, Shield, 
@@ -182,7 +183,13 @@ export default function LandingPage() {
           SECTION 2: WHAT IS ANAMNESIS-AI?
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 border-b border-white/5">
-        <div className="grid gap-12 lg:grid-cols-2 items-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="grid gap-12 lg:grid-cols-2 items-center"
+        >
           <div className="space-y-4">
             <span className="text-mono-label text-cyan-400">Sandbox Philosophy</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">What is Anamnesis-AI?</h2>
@@ -214,7 +221,13 @@ export default function LandingPage() {
           SECTION 3: HOW IT WORKS
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 border-b border-white/5">
-        <div className="space-y-12 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="space-y-12 text-center"
+        >
           <div className="space-y-3">
             <span className="text-mono-label text-cyan-400">Workflow Pipeline</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">How It Works</h2>
@@ -303,7 +316,13 @@ export default function LandingPage() {
           SECTION 5: EXAMPLE SIMULATIONS (CAROUSEL)
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 border-b border-white/5">
-        <div className="space-y-10">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="space-y-10"
+        >
           <div className="flex items-end justify-between">
             <div className="space-y-2">
               <span className="text-mono-label text-cyan-400">Archive Vault</span>
@@ -353,14 +372,20 @@ export default function LandingPage() {
               </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ──────────────────────────────
           SECTION 6: RESEARCH METHODOLOGY
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 border-b border-white/5">
-        <div className="space-y-10">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="space-y-10"
+        >
           <div className="space-y-3">
             <span className="text-mono-label text-cyan-400">Vector Mappings</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Research Methodology</h2>
@@ -380,14 +405,20 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ──────────────────────────────
           SECTION 7: WHY TRUST THE RESULTS
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 border-b border-white/5">
-        <div className="grid gap-12 lg:grid-cols-12 items-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="grid gap-12 lg:grid-cols-12 items-center"
+        >
           <div className="lg:col-span-8 space-y-4">
             <span className="text-mono-label text-cyan-400">Plausibility Check</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Why Trust The Results?</h2>
@@ -403,14 +434,20 @@ export default function LandingPage() {
               Confidence score decreases automatically if domain projections deviate from established socio-economic models.
             </p>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ──────────────────────────────
           SECTION 8: CALL TO ACTION
           ────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-4xl px-6 py-20">
-        <div className="rounded-2xl border border-cyan-500/25 bg-slate-950 p-8 sm:p-12 text-center shadow-[0_0_50px_rgba(34,211,238,0.05)] space-y-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="rounded-2xl border border-cyan-500/25 bg-slate-950 p-8 sm:p-12 text-center shadow-[0_0_50px_rgba(34,211,238,0.05)] space-y-6"
+        >
           <h2 className="text-3xl font-extrabold text-white sm:text-4xl">Ready to Diverge History?</h2>
           <p className="mx-auto max-w-xl text-xs text-slate-400 font-light leading-6">
             Access our alternate reality workspace to seed and execute your own custom parallel historical projections.
@@ -424,7 +461,7 @@ export default function LandingPage() {
               Run Custom Simulation <Play className="h-3 w-3 fill-slate-950" />
             </Link>
           </div>
-        </div>
+        </motion.div>
       </section>
     </main>
   );

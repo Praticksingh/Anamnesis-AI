@@ -240,10 +240,26 @@ Anamnesis-AI provides simulated, AI-generated outcomes based on available data a
 
 ## Run the Backend
 
+Windows quick start from the repo root in PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\scripts\Ensure-Postgres.ps1
+.\scripts\Run-Backend.ps1
+```
+
+Open a second PowerShell window for the frontend:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\scripts\Run-Frontend.ps1
+```
+
 Prerequisites:
 
-- PostgreSQL running and reachable
+- PostgreSQL running and reachable for database-backed features
 - `DATABASE_URL` set in `.env`
+- If PostgreSQL is down, the backend still starts, but database routes return `503`
 
 From `/backend`:
 
@@ -276,7 +292,8 @@ powershell -Command "(Invoke-WebRequest -Uri http://127.0.0.1:8000/ -UseBasicPar
 
 - If `POST /api/scenarios` returns `503`, database connection is unavailable.
 - Verify `backend/.env` contains a valid `DATABASE_URL`.
-- Ensure PostgreSQL is running and reachable from your machine.
+- Ensure PostgreSQL is running and reachable from your machine before using scenario storage and reports.
+- A startup warning about the database being unavailable is expected when PostgreSQL is offline.
 
 Windows service check:
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 export default function WorldMap() {
   // Coordinates for major global hubs (London, Tokyo, NY, Rome, Cairo, etc.)
   const nodes = [
@@ -19,35 +17,26 @@ export default function WorldMap() {
       className="absolute inset-0 w-full h-full object-cover opacity-[0.15] select-none pointer-events-none z-0"
     >
       {/* Soft connection arcs */}
-      <motion.path
+      <path
         d="M 200,171 Q 300,100 384,157"
         fill="none"
         stroke="rgba(34, 211, 238, 0.3)"
         strokeWidth="1.5"
         strokeDasharray="4 4"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
       />
-      <motion.path
+      <path
         d="M 384,157 Q 480,120 624,189"
         fill="none"
         stroke="rgba(139, 92, 246, 0.3)"
         strokeWidth="1.5"
         strokeDasharray="4 4"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
       />
-      <motion.path
+      <path
         d="M 384,157 Q 390,260 424,202"
         fill="none"
         stroke="rgba(34, 211, 238, 0.2)"
         strokeWidth="1"
         strokeDasharray="3 3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
       />
 
       {/* Dotted grid lines representing global data feeds */}

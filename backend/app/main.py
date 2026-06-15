@@ -22,8 +22,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Skip Alembic, run automatic SQLAlchemy table creation on startup
-    await create_tables()
-    logger.info("Database tables created / verified")
+    try:
+        await create_tables()
+        logger.info("Database tables created / verified")
+    except (OSError, SQLAlchemyError):
+        logger.warning("Database unavailable during startup; continuing without table verification")
     yield
 
 

@@ -85,33 +85,57 @@ export default function SimulationStatusPage() {
 
     let active = true;
     let intervalId: ReturnType<typeof setInterval> | undefined;
+    let ws: WebSocket | undefined;
+
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const wsBase = apiBase.replace(/^http/, "ws");
+    const wsUrl = `${wsBase}/api/scenarios/${id}/ws`;
+
+    // Establish WebSocket telemetry stream
+    try {
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        setConsoleLogs((l) => [...l, "[system] Connected to live agent telemetry channel."]);
+      };
+      
+      ws.onmessage = (event) => {
+        if (!active) return;
+        setConsoleLogs((l) => [...l, event.data]);
+      };
+      
+      ws.onerror = (err) => {
+        console.error("WebSocket telemetry error:", err);
+      };
+      
+      ws.onclose = () => {
+        if (active) {
+          setConsoleLogs((l) => [...l, "[system] Telemetry session closed."]);
+        }
+      };
+    } catch (e) {
+      console.error("Failed to connect websocket telemetry:", e);
+    }
 
     const fetchStatus = async () => {
       try {
         const nextStatus = await getScenarioStatus(id);
         if (!active) return;
 
-        setStatus((prev) => {
-          // If a new agent completed, trigger console logging for it
-          nextStatus.completed_agents.forEach((agent) => {
-            if (!prev.completed_agents.includes(agent)) {
-              const logs = AGENT_LOGS[agent] || [];
-              setConsoleLogs((l) => [...l, ...logs, `[system] ${agent.toUpperCase()} agent completed execution successfully.`]);
-            }
-          });
-          return nextStatus;
-        });
+        setStatus(nextStatus);
         setLoadError("");
 
         if (nextStatus.status === "done") {
           if (intervalId) clearInterval(intervalId);
+          if (ws) ws.close();
           setTimeout(() => {
             router.push(`/report/${id}`);
-          }, 1500); // Small pause for user to read final terminal console lines
+          }, 2000); // Small pause for user to read final terminal logs
         }
 
-        if (nextStatus.status === "error" && intervalId) {
-          clearInterval(intervalId);
+        if (nextStatus.status === "error") {
+          if (intervalId) clearInterval(intervalId);
+          if (ws) ws.close();
           setConsoleLogs((l) => [...l, `[error] Simulation aborted. Reason: ${nextStatus.error_message}`]);
         }
       } catch (err) {
@@ -128,6 +152,7 @@ export default function SimulationStatusPage() {
     return () => {
       active = false;
       if (intervalId) clearInterval(intervalId);
+      if (ws) ws.close();
     };
   }, [id, router]);
 
@@ -252,7 +277,7 @@ export default function SimulationStatusPage() {
             </div>
 
             <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-600">
-              <span>Streaming: websocket://localhost:8001</span>
+              <span>Streaming: {process.env.NEXT_PUBLIC_API_BASE_URL ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^http/, "ws") : "ws://localhost:8000"}/api/scenarios/{id}/ws</span>
               {status.status === "running" && <RefreshCw className="h-3 w-3 animate-spin" />}
             </div>
           </div>

@@ -11,19 +11,19 @@ const PHASES = [
   },
   {
     phase: "Phase 2",
-    status: "In Progress",
+    status: "Completed",
     title: "Custom Agent Prompt Weights",
     desc: "Allow researchers to customize agent models, alter focus priorities, or add custom system prompts before launching simulations."
   },
   {
     phase: "Phase 3",
-    status: "Planned",
+    status: "Completed",
     title: "Real-time Web Search Integrations",
     desc: "Augment local databases with real-time web crawlers to grab breaking news or scientific papers to answer modern divergence queries."
   },
   {
     phase: "Phase 4",
-    status: "Planned",
+    status: "Completed",
     title: "SaaS Workspaces & Collaborative Trees",
     desc: "Introduce team workspaces, shared simulation dashboards, and nested timeline branch creations to collaborate on parallel history maps."
   }

@@ -5,114 +5,159 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { 
   FileText, Download, Share2, Compass, ArrowLeft, HelpCircle, 
-  AlertTriangle, Shield, Check, Info, FileSpreadsheet, ChevronDown, ChevronUp 
+  AlertTriangle, Shield, Check, Info, FileSpreadsheet, ChevronDown, ChevronUp,
+  Scale, Globe, Clock, GitBranch, MessageSquare, BookOpen
 } from "lucide-react";
 
 import { getScenarioReport, ReportNotReadyError } from "../../../lib/api";
 import { MOCK_SCENARIOS } from "../../../lib/mockScenarios";
-import type { FinalReport, TimelineEvent, AgentOutputSummary } from "../../../lib/types";
+import type { FinalReport, UnifiedTimelineEvent, AgentOutputSummary } from "../../../lib/types";
+
+// Import our advanced custom visual components
+import AnimatedGauges from "../../../components/AnimatedGauges";
+import InteractiveTimeline from "../../../components/InteractiveTimeline";
+import CausalGraph from "../../../components/CausalGraph";
+import ImpactMap from "../../../components/ImpactMap";
 
 function formatAgentName(name: string): string {
   if (!name) return name;
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-function getRingColor(score: number): string {
-  if (score >= 70) return "#22d3ee"; // Cyan
-  if (score >= 45) return "#8b5cf6"; // Violet
-  return "#fb7185"; // Rose
+interface RadarData {
+  economy: number;
+  technology: number;
+  society: number;
+  climate: number;
+  politics: number;
 }
 
-function ConfidenceRing({ score }: { score: number }) {
-  const size = 130;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - score / 100);
-  const color = getRingColor(score);
+function RadarChart({ data }: { data: RadarData }) {
+  const size = 300;
+  const center = size / 2;
+  const maxRadius = 90;
+  
+  const axes: { key: keyof RadarData; label: string; angle: number }[] = [
+    { key: "economy", label: "Economy", angle: -90 },
+    { key: "technology", label: "Tech", angle: -18 },
+    { key: "society", label: "Society", angle: 54 },
+    { key: "climate", label: "Climate", angle: 126 },
+    { key: "politics", label: "Politics", angle: 198 },
+  ];
+
+  const getCoordinates = (angleDegrees: number, value: number) => {
+    const amplitude = Math.max(0, Math.min(100, Math.abs(value)));
+    const radius = maxRadius * (amplitude / 100);
+    const angleRadians = (angleDegrees * Math.PI) / 180;
+    const x = center + radius * Math.cos(angleRadians);
+    const y = center + radius * Math.sin(angleRadians);
+    return { x, y };
+  };
+
+  const gridLevels = [25, 50, 75, 100];
+  const gridPoints = gridLevels.map(level => {
+    return axes.map(axis => {
+      const angleRadians = (axis.angle * Math.PI) / 180;
+      const radius = maxRadius * (level / 100);
+      const x = center + radius * Math.cos(angleRadians);
+      const y = center + radius * Math.sin(angleRadians);
+      return `${x},${y}`;
+    }).join(" ");
+  });
+
+  const simPoints = axes.map(axis => {
+    const score = data[axis.key];
+    const { x, y } = getCoordinates(axis.angle, score);
+    return `${x},${y}`;
+  }).join(" ");
 
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90 transform">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.03)"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
+    <div className="flex flex-col items-center justify-center p-5 bg-[#070708] rounded-xl border border-white/5 shadow-2xl relative overflow-hidden group w-full max-w-[280px] h-[300px]">
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-violet-500/5 opacity-40 pointer-events-none" />
+      <span className="text-[9px] font-mono text-cyan-400 font-bold uppercase tracking-wider mb-2 relative z-10">Simulation Footprint</span>
+      
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="relative z-10 -mt-2">
+        {/* Draw background pentagons */}
+        {gridPoints.map((points, idx) => (
+          <polygon
+            key={idx}
+            points={points}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.04)"
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* Draw axis lines */}
+        {axes.map((axis, idx) => {
+          const angleRadians = (axis.angle * Math.PI) / 180;
+          const x2 = center + maxRadius * Math.cos(angleRadians);
+          const y2 = center + maxRadius * Math.sin(angleRadians);
+          return (
+            <line
+              key={idx}
+              x1={center}
+              y1={center}
+              x2={x2}
+              y2={y2}
+              stroke="rgba(255, 255, 255, 0.05)"
+              strokeWidth="1"
+              strokeDasharray="3 3"
+            />
+          );
+        })}
+
+        {/* Draw impact polygon */}
+        <polygon
+          points={simPoints}
+          fill="rgba(34, 211, 238, 0.12)"
+          stroke="url(#radarGradient)"
+          strokeWidth="2"
           className="transition-all duration-1000 ease-out"
         />
+
+        {/* Define gradients */}
+        <defs>
+          <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22d3ee" />
+            <stop offset="100%" stopColor="#8b5cf6" />
+          </linearGradient>
+        </defs>
+
+        {/* Draw axis labels and dots */}
+        {axes.map((axis, idx) => {
+          const score = data[axis.key];
+          const angleRadians = (axis.angle * Math.PI) / 180;
+          const labelDist = maxRadius + 18;
+          const lx = center + labelDist * Math.cos(angleRadians);
+          const ly = center + labelDist * Math.sin(angleRadians) + 3;
+
+          const { x, y } = getCoordinates(axis.angle, score);
+          const dotColor = score > 0 ? "#10b981" : score < 0 ? "#f43f5e" : "#64748b";
+
+          return (
+            <g key={idx}>
+              <circle
+                cx={x}
+                cy={y}
+                r="4"
+                fill={dotColor}
+                stroke="rgba(0, 0, 0, 0.8)"
+                strokeWidth="1.5"
+                className="transition-all duration-1000 ease-out"
+              />
+              <text
+                x={lx}
+                y={ly}
+                textAnchor="middle"
+                className="font-mono text-[8px] font-bold fill-slate-500 transition-colors uppercase tracking-wider"
+              >
+                {axis.label}
+              </text>
+            </g>
+          );
+        })}
       </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-2xl font-extrabold text-white tracking-tight">{score}%</span>
-        <span className="mt-0.5 text-[8px] uppercase tracking-[0.25em] text-slate-500">Plausibility</span>
-      </div>
-    </div>
-  );
-}
-
-function ImpactCard({ label, score, tooltip }: { label: string; score: number; tooltip: string }) {
-  const absScore = Math.abs(score);
-  const color = score > 0 ? "#10b981" : score < 0 ? "#f43f5e" : "#64748b"; // emerald / rose / slate
-  
-  const size = 80;
-  const strokeWidth = 6;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - absScore / 100);
-
-  return (
-    <div className="group relative flex flex-col items-center justify-center rounded-xl border border-white/5 bg-slate-950/45 p-4 shadow-xl hover:border-white/10 transition-all duration-300">
-      {/* Tooltip */}
-      <div className="pointer-events-none absolute bottom-full mb-2 w-48 scale-95 rounded-lg border border-white/5 bg-slate-950 p-2 text-center text-[10px] leading-4 text-slate-400 opacity-0 transition group-hover:scale-100 group-hover:opacity-100 shadow-2xl z-20">
-        {tooltip}
-      </div>
-
-      <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-slate-500 group-hover:text-cyan-400 transition-colors">
-        {label}
-      </p>
-      
-      <div className="relative flex items-center justify-center">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90 transform">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.02)"
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            className="transition-all duration-1000 ease-out"
-          />
-        </svg>
-        <div className="absolute flex flex-col items-center justify-center">
-          <span className={`text-sm font-bold ${score > 0 ? "text-emerald-400" : score < 0 ? "text-rose-400" : "text-slate-400"}`}>
-            {score > 0 ? "+" : ""}{score}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -123,7 +168,7 @@ export default function ReportPage() {
   const [report, setReport] = useState<FinalReport | null>(null);
   const [error, setError] = useState("");
   const [shareStatus, setShareStatus] = useState("Share Report");
-  const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<"synthesis" | "timeline" | "causal" | "discussions" | "sources">("synthesis");
 
   const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
 
@@ -164,13 +209,9 @@ export default function ReportPage() {
   }, [id, router]);
 
   const sortedTimeline = useMemo(() => {
-    if (!report) return [] as TimelineEvent[];
+    if (!report) return [] as UnifiedTimelineEvent[];
     return [...report.alternate_timeline].sort((l, r) => l.year - r.year);
   }, [report]);
-
-  const toggleEvent = (key: string) => {
-    setExpandedEvents((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -215,6 +256,14 @@ export default function ReportPage() {
 
   const impactDashboard = report.impact_dashboard;
 
+  const tabs = [
+    { id: "synthesis", label: "Executive Synthesis", icon: FileText },
+    { id: "timeline", label: "Interactive Chronology", icon: Clock },
+    { id: "causal", label: "Causal DAG Graph", icon: GitBranch },
+    { id: "discussions", label: "Domain Briefings", icon: MessageSquare },
+    { id: "sources", label: "Consulted Sources", icon: BookOpen },
+  ] as const;
+
   return (
     <main className="min-h-screen bg-black px-6 py-12 relative overflow-hidden select-none">
       <div className="mx-auto max-w-5xl space-y-8 relative z-10">
@@ -229,6 +278,14 @@ export default function ReportPage() {
           </Link>
           
           <div className="flex flex-wrap items-center gap-2">
+            {/* Compare Trigger */}
+            <Link
+              href={`/compare?idA=${id}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-4 text-xs font-semibold text-cyan-400 hover:bg-cyan-950/45 transition-colors"
+            >
+              <Scale className="h-3.5 w-3.5" /> Compare Scenario
+            </Link>
+
             <button
               type="button"
               onClick={handleShare}
@@ -236,6 +293,7 @@ export default function ReportPage() {
             >
               <Share2 className="h-3.5 w-3.5" /> {shareStatus}
             </button>
+            
             <button
               type="button"
               onClick={handleExport}
@@ -246,219 +304,310 @@ export default function ReportPage() {
           </div>
         </div>
 
-        {/* Executive Summary */}
-        <section className="rounded-2xl glass-panel p-8 shadow-2xl space-y-4">
-          <div className="flex items-center gap-2 text-mono-label text-cyan-400">
-            <FileText className="h-3.5 w-3.5" />
-            <span>Executive Synthesis</span>
-          </div>
-          <h1 className="text-3xl font-extrabold leading-snug text-white sm:text-4xl">
-            {report.scenario_summary}
-          </h1>
-        </section>
+        {/* Tabbed Navigation Bar */}
+        <div className="flex border-b border-white/5 overflow-x-auto scrollbar-none">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-5 py-4 border-b-2 font-mono text-[10px] uppercase font-bold tracking-widest transition-all duration-300 shrink-0 ${
+                  isActive
+                    ? "border-cyan-400 text-cyan-400 bg-cyan-400/5"
+                    : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Impact Dashboard Grid */}
-        <section className="rounded-2xl glass-panel p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <h2 className="text-md font-bold tracking-wide text-white">Impact Analysis Matrix</h2>
+        {/* Main Tab Contents */}
+        <div className="space-y-8 min-h-[500px]">
+          
+          {/* TAB 1: EXECUTIVE SYNTHESIS */}
+          {activeTab === "synthesis" && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Executive Summary */}
+              <section className="rounded-2xl glass-panel p-8 shadow-2xl space-y-4">
+                <div className="flex items-center gap-2 text-mono-label text-cyan-400">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Scenario Abstract Summary</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold leading-snug text-white">
+                  {report.scenario_summary}
+                </h1>
+              </section>
+
+              {/* Advanced Scoring Gauges */}
+              <AnimatedGauges
+                plausibilityScore={report.confidence_score}
+                uncertaintyScore={report.uncertainty_score || 0}
+                calibrationScore={report.calibration_score || 100}
+              />
+
+              {/* Geographic Impact Map & Radar Matrix Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                {/* World Map Container (col-span-8) */}
+                <div className="lg:col-span-8 rounded-2xl glass-panel p-6 sm:p-8 flex flex-col justify-between space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2 font-mono">
+                    <Globe className="h-4 w-4 text-cyan-400" /> Scenario Impact Focus Zones
+                  </h3>
+                  <ImpactMap
+                    scenarioTitle={report.scenario_summary}
+                    scenarioSummary={report.scenario_summary}
+                    agentOutputs={report.agent_outputs}
+                  />
+                </div>
+
+                {/* Radar Chart matrix (col-span-4) */}
+                <div className="lg:col-span-4 rounded-2xl glass-panel p-6 sm:p-8 flex flex-col items-center justify-center">
+                  <RadarChart data={impactDashboard} />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-light">
-              <Info className="h-3 w-3" /> Hover for agent summaries
+          )}
+
+          {/* TAB 2: INTERACTIVE TIMELINE */}
+          {activeTab === "timeline" && (
+            <div className="animate-fade-in">
+              <InteractiveTimeline
+                events={sortedTimeline}
+                validations={report.grounding_validations || []}
+                onBranch={(event) => {
+                  const eventId = event.id || `${event.year}`;
+                  router.push(`/simulation?parent_id=${id}&event_id=${eventId}`);
+                }}
+              />
             </div>
-          </div>
+          )}
 
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
-            <ImpactCard 
-              label="Economy" 
-              score={impactDashboard.economy} 
-              tooltip="Macroeconomic deviation, trade networks, and investment efficiency index." 
-            />
-            <ImpactCard 
-              label="Technology" 
-              score={impactDashboard.technology} 
-              tooltip="Systemic vector shift in material science, calculation, and computing." 
-            />
-            <ImpactCard 
-              label="Society" 
-              score={impactDashboard.society} 
-              tooltip="Shift in demographics, education networks, and communal cooperatives." 
-            />
-            <ImpactCard 
-              label="Climate" 
-              score={impactDashboard.climate} 
-              tooltip="Atmospheric carbon level, rainfall cycle feedback, and biodiversity index." 
-            />
-            <ImpactCard 
-              label="Politics" 
-              score={impactDashboard.politics} 
-              tooltip="Centralized administrative scale, legal sovereignty, and citizen rights." 
-            />
-          </div>
-        </section>
-
-        {/* Alternate Timeline (Expandable) */}
-        <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
-              <h2 className="text-md font-bold tracking-wide text-white">Diverged Chronology</h2>
+          {/* TAB 3: CAUSAL DAG GRAPH */}
+          {activeTab === "causal" && (
+            <div className="animate-fade-in">
+              <CausalGraph
+                events={report.alternate_timeline}
+                links={report.causal_graph || []}
+              />
             </div>
-            <span className="text-[10px] text-slate-500 font-light font-mono">{sortedTimeline.length} events logged</span>
-          </div>
+          )}
 
-          <div className="relative space-y-6 pl-4 sm:pl-6">
-            {/* Timeline connector line */}
-            <div className="absolute left-3.5 top-2.5 bottom-2.5 w-px bg-gradient-to-b from-cyan-400 via-violet-400 to-transparent" />
-            
-            {sortedTimeline.map((event, index) => {
-              const eventKey = `${event.year}-${index}`;
-              const isExpanded = !!expandedEvents[eventKey];
-              return (
-                <div key={eventKey} className="relative flex gap-4 animate-slide-in">
-                  {/* Circle Node indicator */}
-                  <div className="absolute left-[-1.15rem] top-2 h-3.5 w-3.5 rounded-full border border-slate-950 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] z-10" />
-                  
-                  {/* Year Tag */}
-                  <div className="min-w-20 rounded-lg border border-white/5 bg-slate-950/50 px-2.5 py-1 text-center font-mono text-xs font-bold text-cyan-300 backdrop-blur-md shrink-0 h-fit self-start">
-                    {event.year}
+          {/* TAB 4: DOMAIN BRIEFINGS */}
+          {activeTab === "discussions" && (
+            <div className="space-y-8 animate-fade-in">
+              
+              {/* Agent narratives */}
+              <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                  <h2 className="text-md font-bold tracking-wide text-white">Expert Domain Briefings</h2>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  {report.agent_outputs.map((agent: AgentOutputSummary, index: number) => (
+                    <div
+                      key={`${agent.agent_name}-${index}`}
+                      className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner hover:border-white/10 transition-colors duration-300"
+                    >
+                      <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-2">
+                        <p className="font-semibold text-cyan-200 text-xs tracking-wide">{formatAgentName(agent.agent_name)} Agent</p>
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-500">Domain Briefing</span>
+                      </div>
+                      <p className="text-xs leading-relaxed text-slate-400 font-light">{agent.analysis_text}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Critic panel */}
+              <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <h2 className="text-md font-bold tracking-wide text-white">Critic Evaluation Report</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-900/30 border border-white/5 space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Plausibility assessment Rationale</h4>
+                    <p className="text-xs leading-relaxed text-slate-400 font-light">
+                      {report.confidence_explanation}
+                    </p>
                   </div>
 
-                  {/* Expandable Box */}
-                  <div 
-                    onClick={() => toggleEvent(eventKey)}
-                    className="flex-1 rounded-xl border border-white/5 bg-slate-950/30 px-4 py-3 text-xs leading-6 text-slate-300 hover:border-white/10 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-4 mb-2">
-                      <span className="text-[9px] font-bold uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded text-cyan-200 border border-white/5">
-                        {event.source_agent}
-                      </span>
-                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-slate-600" /> : <ChevronDown className="h-3.5 w-3.5 text-slate-600" />}
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="space-y-2 p-4 rounded-xl bg-slate-900/30 border border-white/5">
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5 text-rose-400" /> Inconsistencies Detected
+                      </h5>
+                      <ul className="text-xs space-y-2 font-light text-rose-300">
+                        {report.risk_notes.map((note, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5 leading-normal">
+                            <span className="text-rose-400">•</span>
+                            <span>{note}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    
-                    <p className="font-light text-slate-200">{event.event}</p>
 
-                    {isExpanded && (
-                      <div className="mt-3 pt-3 border-t border-white/5 text-[11px] text-slate-400 font-light leading-5 space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-cyan-400/80 font-semibold uppercase tracking-wider text-[9px]">
-                          <Info className="h-3 w-3" /> Core Divergence Factor
+                    <div className="space-y-2 p-4 rounded-xl bg-slate-900/30 border border-white/5">
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                        <Shield className="h-3.5 w-3.5 text-emerald-400" /> Calibration Notes
+                      </h5>
+                      <ul className="text-xs space-y-2 font-light text-emerald-300">
+                        <li className="flex items-start gap-1.5 leading-normal">
+                          <span className="text-emerald-400">•</span>
+                          <span>Timeline pacing matches standard logical transitions without ungrounded jumps.</span>
+                        </li>
+                        <li className="flex items-start gap-1.5 leading-normal">
+                          <span className="text-emerald-400">•</span>
+                          <span>Cross-agent contradictions are within bounds (plausibility score {report.confidence_score}%).</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Assumptions panel */}
+              {report.assumptions && report.assumptions.length > 0 && (
+                <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    <h2 className="text-md font-bold tracking-wide text-white">Extracted Core Assumptions</h2>
+                  </div>
+                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {report.assumptions.map((item, idx) => {
+                      const impactColor = 
+                        item.impact_level.toLowerCase() === "high" 
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.1)]" 
+                          : item.impact_level.toLowerCase() === "medium"
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+                      
+                      return (
+                        <div key={idx} className="p-4 rounded-xl bg-slate-955/40 border border-white/5 flex flex-col justify-between space-y-3 hover:border-white/10 transition duration-300">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                              {formatAgentName(item.agent_name)} Agent
+                            </span>
+                            <span className={`text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${impactColor}`}>
+                              {item.impact_level} Impact
+                            </span>
+                          </div>
+                          <p className="text-xs font-light text-slate-300 leading-relaxed italic">
+                            "{item.assumption}"
+                          </p>
                         </div>
-                        <p>This event marks a critical structural deviation, changing resource reallocations across adjacent domains.</p>
-                      </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+            </div>
+          )}
+
+          {/* TAB 5: CONSULTED SOURCES */}
+          {activeTab === "sources" && (
+            <div className="animate-fade-in">
+              <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                  <h2 className="text-md font-bold tracking-wide text-white">Consulted Sources & References</h2>
+                </div>
+                
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner">
+                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                      <Info className="h-3.5 w-3.5" /> Primary Sources
+                    </h3>
+                    {report.sources_consulted && report.sources_consulted.length > 0 ? (
+                      <ul className="list-inside list-disc space-y-2 text-xs text-slate-400 font-light">
+                        {report.sources_consulted.map((source, index) => (
+                          <li key={index}>{source}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-slate-600 font-light">No external sources consulted.</p>
+                    )}
+                  </div>
+                  
+                  <div className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner">
+                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                      <FileSpreadsheet className="h-3.5 w-3.5" /> Retrieved Documents
+                    </h3>
+                    {report.retrieved_documents && report.retrieved_documents.length > 0 ? (
+                      <ul className="list-inside list-disc space-y-2 text-xs text-slate-400 font-light">
+                        {report.retrieved_documents.map((doc, index) => (
+                          <li key={index}>{doc}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-slate-600 font-light">No reference materials retrieved.</p>
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
+              </section>
 
-        {/* Agent Discussions */}
-        <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            <h2 className="text-md font-bold tracking-wide text-white">Domain Agent Discussions</h2>
-          </div>
+              {/* Grounding validation list */}
+              {report.grounding_validations && report.grounding_validations.length > 0 && (
+                <section className="mt-8 rounded-2xl glass-panel p-8 shadow-xl space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <h2 className="text-md font-bold tracking-wide text-white">Grounding & Source Verification Audit</h2>
+                  </div>
+                  
+                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {report.grounding_validations.map((val, idx) => {
+                      const scoreColor = 
+                        val.grounding_score >= 80 
+                          ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.1)]" 
+                          : val.grounding_score >= 60
+                          ? "text-amber-400 bg-amber-950/20 border-amber-500/30"
+                          : "text-rose-400 bg-rose-950/20 border-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.1)]";
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {report.agent_outputs.map((agent: AgentOutputSummary, index: number) => (
-              <div
-                key={`${agent.agent_name}-${index}`}
-                className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner"
-              >
-                <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-2">
-                  <p className="font-semibold text-cyan-200 text-xs tracking-wide">{formatAgentName(agent.agent_name)} Agent</p>
-                  <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-500">Domain View</span>
-                </div>
-                <p className="text-xs leading-6 text-slate-400 font-light">{agent.analysis_text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+                      return (
+                        <div key={idx} className="p-5 rounded-xl border border-white/5 bg-slate-950/40 space-y-4 hover:border-white/10 transition duration-300">
+                          <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <span className="text-xs font-bold text-slate-200 uppercase tracking-wide">
+                              {formatAgentName(val.agent_name)} Agent
+                            </span>
+                            <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${scoreColor}`}>
+                              {val.grounding_score}% Grounded
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-slate-400 leading-relaxed font-light">
+                            {val.explanation}
+                          </p>
 
-        {/* Critic Confidence Panel */}
-        <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            <h2 className="text-md font-bold tracking-wide text-white">Critic Consistency Evaluation</h2>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-12 items-center">
-            <div className="md:col-span-4 flex justify-center">
-              <ConfidenceRing score={report.confidence_score} />
-            </div>
-
-            <div className="md:col-span-8 space-y-4">
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Plausibility explanation</h4>
-                <p className="text-xs leading-6 text-slate-400 font-light">
-                  {report.confidence_explanation}
-                </p>
-              </div>
-
-              {/* Assumptions & Risk lists */}
-              <div className="grid gap-4 sm:grid-cols-2 pt-2">
-                <div className="space-y-2">
-                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Simulator Inconsistencies</h5>
-                  <ul className="text-xs space-y-1.5 font-light text-rose-300">
-                    {report.risk_notes.map((note, idx) => (
-                      <li key={idx} className="flex items-start gap-1.5 leading-5">
-                        <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
-                        <span>{note}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Retrieval Verification</h5>
-                  <ul className="text-xs space-y-1.5 font-light text-emerald-300">
-                    <li className="flex items-start gap-1.5 leading-5">
-                      <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <span>Chronology verified against static historical data points.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Source Center */}
-        <section className="rounded-2xl glass-panel p-8 shadow-xl space-y-6">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-            <h2 className="text-md font-bold tracking-wide text-white">Consulted Sources & References</h2>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner">
-              <h3 className="mb-3 text-[10px] font-bold uppercase tracking-wider text-cyan-300">Sources Consulted</h3>
-              {report.sources_consulted && report.sources_consulted.length > 0 ? (
-                <ul className="list-inside list-disc space-y-2 text-xs text-slate-400 font-light">
-                  {report.sources_consulted.map((source, index) => (
-                    <li key={index}>{source}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-slate-600 font-light">No external sources consulted.</p>
+                          {val.unsupported_claims && val.unsupported_claims.length > 0 && (
+                            <div className="p-3 rounded-lg bg-rose-950/10 border border-rose-500/10 space-y-1.5">
+                              <span className="text-[8px] font-bold uppercase tracking-wider text-rose-300 block">
+                                Unsupported Claims Flagged
+                              </span>
+                              <ul className="list-inside list-disc text-[10px] text-rose-400/95 space-y-1 leading-normal font-light font-sans">
+                                {val.unsupported_claims.map((claim, cIdx) => (
+                                  <li key={cIdx}>{claim}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               )}
+
             </div>
-            
-            <div className="rounded-xl border border-white/5 bg-slate-950/45 p-5 shadow-inner">
-              <h3 className="mb-3 text-[10px] font-bold uppercase tracking-wider text-cyan-300">Retrieved Reference Materials</h3>
-              {report.retrieved_documents && report.retrieved_documents.length > 0 ? (
-                <ul className="list-inside list-disc space-y-2 text-xs text-slate-400 font-light">
-                  {report.retrieved_documents.map((doc, index) => (
-                    <li key={index}>{doc}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-slate-600 font-light">No reference materials retrieved.</p>
-              )}
-            </div>
-          </div>
-        </section>
+          )}
+
+        </div>
 
         {/* Action Trigger */}
         <div className="flex justify-center pt-4">

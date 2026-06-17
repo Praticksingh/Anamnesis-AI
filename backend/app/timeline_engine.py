@@ -10,7 +10,7 @@ def create_unified_timeline(agent_events: dict[str, list[TimelineEvent]]) -> lis
     unified = []
     
     # Priority order for deduplication tie-breaking and timeline sequencing
-    agent_order = ["historian", "climate", "economist", "technology", "society"]
+    agent_order = ["historian", "climate", "economist", "technology", "society", "political", "energy", "healthcare", "demographics"]
     
     for agent in agent_order:
         events = agent_events.get(agent, [])

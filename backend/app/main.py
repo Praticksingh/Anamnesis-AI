@@ -1,12 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.database import AsyncSessionLocal, create_tables, get_db
+from app.config import CORS_ORIGINS, MAX_INPUT_LENGTH
+from app.database import AsyncSessionLocal, create_tables, db_health_check, get_db
+from app.logging_config import setup_logging
 from app.models import AgentOutput, FinalReport, Scenario
 from app.orchestrator import run_simulation_graph
 from app.schemas import (
@@ -14,15 +16,58 @@ from app.schemas import (
     ScenarioCreateRequest,
     ScenarioCreateResponse,
     ScenarioStatusResponse,
+    UnifiedTimelineEvent,
+    BranchRequest,
+    AskRequest,
+    DebateRequest,
+    AdjustRequest,
 )
+from app.telemetry import register_websocket, unregister_websocket
+from app.simulation.branching_engine import create_branch_context
+from app.exploration.qa_engine import answer_scenario_question
+from app.exploration.debate_engine import run_agent_debate
+from app.exploration.parameter_adjuster import adjust_scenario_parameters
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     # Skip Alembic, run automatic SQLAlchemy table creation on startup
     await create_tables()
+    # Self-healing database migration for Phase 4 & 5 columns
+    async with AsyncSessionLocal() as session:
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN causal_graph JSON"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration causal_graph ignored/failed: %s", e)
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN assumptions JSON"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration assumptions ignored/failed: %s", e)
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN agent_confidences JSON"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration agent_confidences ignored/failed: %s", e)
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN grounding_validations JSON"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration grounding_validations ignored/failed: %s", e)
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN uncertainty_score REAL"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration uncertainty_score ignored/failed: %s", e)
+        try:
+            await session.execute(text("ALTER TABLE final_report ADD COLUMN calibration_score INTEGER"))
+            await session.commit()
+        except Exception as e:
+            logger.info("Self-healing migration calibration_score ignored/failed: %s", e)
     logger.info("Database tables created / verified")
     yield
 
@@ -38,7 +83,7 @@ def _db_unavailable_exception() -> HTTPException:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,8 +91,26 @@ app.add_middleware(
 
 
 @app.get("/")
-def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+async def health_check() -> dict[str, str]:
+    db_ok = await db_health_check()
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "database": "connected" if db_ok else "unreachable",
+    }
+
+
+@app.websocket("/api/scenarios/{scenario_id}/ws")
+async def websocket_telemetry(websocket: WebSocket, scenario_id: str):
+    await websocket.accept()
+    await register_websocket(scenario_id, websocket)
+    try:
+        while True:
+            # Maintain connection, client will only read
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        unregister_websocket(scenario_id, websocket)
+    except Exception:
+        unregister_websocket(scenario_id, websocket)
 
 
 @app.post("/api/scenarios", response_model=ScenarioCreateResponse, status_code=201)
@@ -56,8 +119,17 @@ async def create_scenario(
     background_tasks: BackgroundTasks,
     db=Depends(get_db),
 ) -> ScenarioCreateResponse:
+    # Input validation
+    trimmed = request.raw_input.strip()
+    if not trimmed:
+        raise HTTPException(status_code=422, detail="Scenario input cannot be empty.")
+    if len(trimmed) > MAX_INPUT_LENGTH:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Input exceeds maximum length of {MAX_INPUT_LENGTH} characters.",
+        )
     try:
-        scenario = Scenario(raw_input=request.raw_input, status="pending")
+        scenario = Scenario(raw_input=trimmed, status="pending")
         db.add(scenario)
         await db.commit()
         await db.refresh(scenario)
@@ -73,7 +145,101 @@ async def create_scenario(
         raise _db_unavailable_exception()
 
 
-async def run_simulation_background(scenario_id: str):
+@app.post("/api/scenarios/{scenario_id}/branch", response_model=ScenarioCreateResponse, status_code=201)
+async def branch_scenario(
+    scenario_id: str,
+    request: BranchRequest,
+    background_tasks: BackgroundTasks,
+    db=Depends(get_db),
+) -> ScenarioCreateResponse:
+    try:
+        # Get branching context from branching engine
+        divergence_year, pre_divergence_timeline_data, parent_raw_input = await create_branch_context(
+            db, scenario_id, request.divergent_event_id
+        )
+        
+        # Build child scenario text
+        child_input = f"Branch of '{parent_raw_input}' at year {divergence_year} where: {request.alternative_event.strip()}"
+        
+        # Create branched child scenario record
+        scenario = Scenario(raw_input=child_input, status="pending")
+        db.add(scenario)
+        await db.commit()
+        await db.refresh(scenario)
+        
+        # Queue the background simulation task with pre-divergence timeline locked in
+        background_tasks.add_task(run_simulation_background, scenario.id, pre_divergence_timeline_data)
+        
+        return ScenarioCreateResponse(scenario_id=scenario.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except SQLAlchemyError:
+        logger.exception("Database error while branching scenario")
+        raise _db_unavailable_exception()
+    except Exception as exc:
+        logger.exception("Unexpected error while branching scenario")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/scenarios/{scenario_id}/ask")
+async def ask_scenario(
+    scenario_id: str,
+    request: AskRequest,
+    db=Depends(get_db),
+):
+    try:
+        response = await answer_scenario_question(db, scenario_id, request.question)
+        return response
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Unexpected error in Q&A endpoint")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/scenarios/{scenario_id}/debate")
+async def debate_scenario(
+    scenario_id: str,
+    request: DebateRequest,
+    db=Depends(get_db),
+):
+    try:
+        response = await run_agent_debate(
+            db, 
+            scenario_id, 
+            request.topic, 
+            request.agent_a, 
+            request.agent_b
+        )
+        return response
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Unexpected error in debate endpoint")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/scenarios/{scenario_id}/adjust")
+async def adjust_scenario(
+    scenario_id: str,
+    request: AdjustRequest,
+    db=Depends(get_db),
+):
+    try:
+        response = await adjust_scenario_parameters(db, scenario_id, request.adjustments)
+        return response
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Unexpected error in adjust parameters endpoint")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+
+async def run_simulation_background(scenario_id: str, pre_divergence_timeline_data: list[dict] | None = None):
+    from app.telemetry import current_scenario_id, broadcast_log
+    current_scenario_id.set(str(scenario_id))
+
     async with AsyncSessionLocal() as db:
         try:
             scenario = await db.get(Scenario, scenario_id)
@@ -83,11 +249,21 @@ async def run_simulation_background(scenario_id: str):
             scenario.status = "running"
             await db.commit()
 
-            result = await run_simulation_graph(str(scenario_id), scenario.raw_input)
+            await broadcast_log("[system] Workspace initialization complete. Seeding scenario context...")
+            await broadcast_log(f"[system] Simulating query: \"{scenario.raw_input}\"")
+
+            pre_divergence_timeline = None
+            if pre_divergence_timeline_data:
+                pre_divergence_timeline = [
+                    UnifiedTimelineEvent.model_validate(ev) for ev in pre_divergence_timeline_data
+                ]
+
+            result = await run_simulation_graph(str(scenario_id), scenario.raw_input, pre_divergence_timeline)
             if result.get("error") is not None:
                 scenario.status = "error"
                 scenario.error_message = result["error"]
                 await db.commit()
+                await broadcast_log(f"[error] Simulation aborted: {result['error']}")
                 return
 
             # Save individual agent outputs to AgentOutput table
@@ -97,6 +273,10 @@ async def run_simulation_background(scenario_id: str):
                 ("technology_output", "technology"),
                 ("society_output", "society"),
                 ("climate_output", "climate"),
+                ("political_output", "political"),
+                ("energy_output", "energy"),
+                ("healthcare_output", "healthcare"),
+                ("demographics_output", "demographics"),
             ]
             for state_key, agent_name in agent_mappings:
                 output_val = result.get(state_key)
@@ -121,6 +301,7 @@ async def run_simulation_background(scenario_id: str):
             scenario.status = "done"
             scenario.error_message = None
             await db.commit()
+            await broadcast_log("[system] Simulation finalized. Synthesizing final dashboard indicators...")
         except Exception as exc:
             logger.exception("Unexpected error while running scenario %s", scenario_id)
             try:
@@ -181,7 +362,7 @@ async def get_scenario_report(
         agent_result = await db.execute(
             select(AgentOutput).where(
                 AgentOutput.scenario_id == scenario_id,
-                AgentOutput.agent_name.in_(["historian", "economist", "technology", "society", "climate"]),
+                AgentOutput.agent_name.in_(["historian", "economist", "technology", "society", "climate", "political", "energy", "healthcare", "demographics"]),
             )
         )
         agent_rows = {agent_output.agent_name: agent_output for agent_output in agent_result.scalars().all()}
@@ -197,7 +378,7 @@ async def get_scenario_report(
                         "timeline_events": agent_rows[agent_name].structured_data.get("timeline_events"),
                         "impact_score": agent_rows[agent_name].structured_data.get("impact_score"),
                     }
-                    for agent_name in ["historian", "economist", "technology", "society", "climate"]
+                    for agent_name in ["historian", "economist", "technology", "society", "climate", "political", "energy", "healthcare", "demographics"]
                     if agent_name in agent_rows
                 ],
                 "impact_dashboard": report.impact_dashboard,
@@ -206,6 +387,12 @@ async def get_scenario_report(
                 "risk_notes": report.risk_notes,
                 "sources_consulted": report.sources_consulted,
                 "retrieved_documents": report.retrieved_documents,
+                "causal_graph": report.causal_graph or [],
+                "assumptions": report.assumptions or [],
+                "agent_confidences": report.agent_confidences or [],
+                "grounding_validations": report.grounding_validations or [],
+                "uncertainty_score": report.uncertainty_score or 0.0,
+                "calibration_score": report.calibration_score or 100,
             }
         )
     except HTTPException:

@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 try:
     import wikipedia
     HAS_WIKI = True
+    if wikipedia is not None:
+        wikipedia.set_user_agent("AnamnesisAI/1.0 (contact@example.com)")
 except ImportError:
     wikipedia = None
     HAS_WIKI = False
@@ -22,6 +24,9 @@ except ImportError:
     logger.warning("arxiv package not installed. ResearchPaperLoader will be inactive.")
 
 
+from app.rag.cache import rag_cache
+
+
 @dataclass
 class Document:
     id: str
@@ -31,6 +36,7 @@ class Document:
 
 class WikipediaLoader:
     @staticmethod
+    @rag_cache("wikipedia")
     async def load(query: str, max_articles: int = 2) -> list[Document]:
         if not HAS_WIKI or wikipedia is None:
             return []
@@ -38,7 +44,8 @@ class WikipediaLoader:
         def _fetch():
             docs = []
             try:
-                search_results = wikipedia.search(query, results=max_articles)
+                # Truncate search queries to prevent Wikipedia query parser failures
+                search_results = wikipedia.search(query[:80], results=max_articles)
                 for title in search_results:
                     try:
                         page = wikipedia.page(title, auto_suggest=False)
@@ -58,6 +65,7 @@ class WikipediaLoader:
 
 class ResearchPaperLoader:
     @staticmethod
+    @rag_cache("arxiv")
     async def load(query: str, max_papers: int = 2) -> list[Document]:
         if not HAS_ARXIV or arxiv is None:
             return []
@@ -65,12 +73,13 @@ class ResearchPaperLoader:
         def _fetch():
             docs = []
             try:
+                client = arxiv.Client()
                 search = arxiv.Search(
-                    query=query,
+                    query=query[:80],
                     max_results=max_papers,
                     sort_by=arxiv.SortCriterion.Relevance
                 )
-                for result in search.results():
+                for result in client.results(search):
                     docs.append(Document(
                         id=f"arxiv-{result.get_short_id()}",
                         content=result.summary,
@@ -114,6 +123,36 @@ class HistoricalDatasetLoader:
             id="hist-greenhouse-effect",
             content="Scientific consensus on global warming developed through the late 20th century, leading to treaties like the Kyoto Protocol (1997) to address carbon emissions and rainfall shifts.",
             metadata={"title": "Climate Science & Kyoto Protocol", "source": "Historical Datasets", "period": "1990s-present"}
+        ),
+        Document(
+            id="hist-roman-empire",
+            content="The Roman Empire at its peak (117 AD) maintained complex trade networks, concrete architecture, and military infrastructure, but collapsed due to economic instability, inflation, external invasions, and fragmented governance.",
+            metadata={"title": "Roman Empire Rise and Fall", "source": "Historical Datasets", "period": "27 BC - 476 AD"}
+        ),
+        Document(
+            id="hist-sahara-greening",
+            content="Hydrological modeling indicates that during the African Humid Period (9000-5000 BC), orbital changes increased monsoon precipitation, turning the Sahara into a savanna with deep lakes and grasslands.",
+            metadata={"title": "Saharan Paleoclimate & Grasslands", "source": "Historical Datasets", "period": "Ancient History"}
+        ),
+        Document(
+            id="hist-ev-development",
+            content="The 1990 California Zero Emission Vehicle (ZEV) mandate required major manufacturers to offer electric cars, prompting GM to build the EV1. However, early battery tech (lead-acid and NiMH) limited range to under 100 miles before lithium-ion emerged.",
+            metadata={"title": "Early Electric Vehicles & ZEV Mandate", "source": "Historical Datasets", "period": "1990-1999"}
+        ),
+        Document(
+            id="hist-space-race-mars",
+            content="The Apollo program (1961-1972) landed astronauts on the Moon. Both NASA and Soviet planners drafted early conceptual proposals for manned Mars flybys and landers using nuclear thermal propulsion (NERVA) in the late 1970s and 1980s.",
+            metadata={"title": "Apollo Program & Manned Mars Concepts", "source": "Historical Datasets", "period": "1960-1989"}
+        ),
+        Document(
+            id="hist-gold-standard",
+            content="The gold standard linked currencies directly to gold value, limiting inflation but constraining money supply growth. In the 20th century, countries transitioned to fiat systems to allow countercyclical monetary policy.",
+            metadata={"title": "Monetary Standards & Fiat Transition", "source": "Historical Datasets", "period": "1870-1971"}
+        ),
+        Document(
+            id="hist-labor-automation",
+            content="Historical transitions (like mechanizing agriculture) displaced millions of manual laborers but created massive industrial and service employment. Modern automation models debate if AI displacements will exceed new job creation rates.",
+            metadata={"title": "Labor Transitions & Industrial Automation", "source": "Historical Datasets", "period": "1800s-present"}
         )
     ]
 

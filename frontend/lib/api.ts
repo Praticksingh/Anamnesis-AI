@@ -58,3 +58,26 @@ export async function getScenarioReport(id: string): Promise<FinalReport> {
 
   return response.json();
 }
+
+export async function branchScenario(
+  parentScenarioId: string,
+  divergentEventId: string,
+  alternativeEvent: string
+): Promise<{ scenario_id: string }> {
+  const response = await fetch(`${API_BASE}/api/scenarios/${parentScenarioId}/branch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      divergent_event_id: divergentEventId,
+      alternative_event: alternativeEvent
+    })
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response);
+  }
+
+  return response.json();
+}

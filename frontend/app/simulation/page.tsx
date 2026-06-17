@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { History, Globe, TrendingUp, Cpu, Users, Landmark, Orbit, ArrowRight, Play, Terminal } from "lucide-react";
-import { createScenario } from "../../lib/api";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { History, Globe, TrendingUp, Cpu, Users, Landmark, Orbit, ArrowRight, Play, Terminal, GitBranch, ArrowLeft } from "lucide-react";
+import { createScenario, branchScenario, getScenarioReport } from "../../lib/api";
+import type { UnifiedTimelineEvent } from "../../lib/types";
 
 const CATEGORIES = [
   { key: "all", label: "All Categories", icon: Terminal },
@@ -32,10 +33,49 @@ const TEMPLATES = [
 
 export default function SimulationConfigPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const parentId = searchParams?.get("parent_id") || "";
+  const eventId = searchParams?.get("event_id") || "";
+
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const [parentEvent, setParentEvent] = useState<UnifiedTimelineEvent | null>(null);
+  const [isLoadingParent, setIsLoadingParent] = useState(false);
+
+  useEffect(() => {
+    if (!parentId || !eventId) {
+      setParentEvent(null);
+      return;
+    }
+
+    let active = true;
+    const loadParentDetails = async () => {
+      setIsLoadingParent(true);
+      try {
+        const report = await getScenarioReport(parentId);
+        if (!active) return;
+        const matched = report.alternate_timeline.find(
+          (ev, idx) => (ev.id || `${ev.year}-${idx}`) === eventId || ev.id === eventId
+        );
+        if (matched) {
+          setParentEvent(matched);
+        }
+      } catch (err) {
+        console.error("Failed to load parent scenario details for branching:", err);
+      } finally {
+        if (active) setIsLoadingParent(false);
+      }
+    };
+
+    void loadParentDetails();
+    return () => {
+      active = false;
+    };
+  }, [parentId, eventId]);
 
   const filteredTemplates = TEMPLATES.filter(
     (t) => activeCategory === "all" || t.category === activeCategory
@@ -49,7 +89,12 @@ export default function SimulationConfigPage() {
     setError("");
 
     try {
-      const result = await createScenario(trimmed);
+      let result;
+      if (parentId && eventId) {
+        result = await branchScenario(parentId, eventId, trimmed);
+      } else {
+        result = await createScenario(trimmed);
+      }
       router.push(`/simulation/${result.scenario_id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to trigger simulation. Please try again.");
@@ -78,12 +123,56 @@ export default function SimulationConfigPage() {
           </p>
         </div>
 
+        {/* Branching Banner Context */}
+        {parentId && eventId && (
+          <div className="rounded-2xl border border-violet-500/20 bg-violet-955/15 p-5 space-y-3 relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+              <GitBranch className="h-24 w-24 text-violet-400" />
+            </div>
+            
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-400 flex items-center gap-1.5 animate-pulse">
+                <GitBranch className="h-3.5 w-3.5 animate-bounce" /> Branching Scenario timeline fork
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  router.push("/simulation");
+                  setParentEvent(null);
+                }}
+                className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="h-3 w-3" /> Cancel Branch
+              </button>
+            </div>
+            
+            {isLoadingParent ? (
+              <p className="text-xs text-slate-500 font-mono animate-pulse">
+                Retrieving parent timeline context...
+              </p>
+            ) : parentEvent ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-white leading-normal">
+                  Diverging at CE {parentEvent.year} from:
+                </p>
+                <p className="text-xs text-violet-300/90 leading-relaxed font-light border-l border-violet-500/30 pl-3 italic">
+                  "{parentEvent.event}"
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 font-mono">
+                Parent event details loaded. Branching from CE timeline context.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Input Card */}
         <div className="rounded-2xl glass-panel p-6 sm:p-8 shadow-2xl relative">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label htmlFor="scenario-prompter" className="text-mono-label text-slate-400">
-                Modification Prompt
+                {parentId && eventId ? "Branch Alternative Event Description" : "Modification Prompt"}
               </label>
               {query.length > 0 && (
                 <button
@@ -100,13 +189,13 @@ export default function SimulationConfigPage() {
               id="scenario-prompter"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="E.g., What if computing remained analog and mechanical slide-rules reached sub-nanometer gear precision?"
+              placeholder={parentId && eventId ? "E.g., What if they failed to contain the event, leading to a localized technological containment breach?" : "E.g., What if computing remained analog and mechanical slide-rules reached sub-nanometer gear precision?"}
               className="min-h-36 w-full rounded-xl border border-white/5 bg-slate-950/65 px-4 py-4 text-sm text-slate-100 placeholder:text-slate-600 focus:border-cyan-500/25 focus:ring-4 focus:ring-cyan-500/5 outline-none transition duration-300 resize-none font-light"
             />
 
             <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/5">
               <span className="text-[11px] font-light text-slate-500">
-                Graph processes 5 domain agents & critic checks.
+                {parentId && eventId ? "Branch locks in pre-divergence events." : "Graph processes 5 domain agents & critic checks."}
               </span>
               <button
                 type="button"
@@ -121,8 +210,17 @@ export default function SimulationConfigPage() {
                   </>
                 ) : (
                   <>
-                    <Play className="h-3.5 w-3.5 fill-slate-950" />
-                    <span>Run Simulation</span>
+                    {parentId && eventId ? (
+                      <>
+                        <GitBranch className="h-3.5 w-3.5 text-slate-950" />
+                        <span>Diverge Timeline & Run</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3.5 w-3.5 fill-slate-950" />
+                        <span>Run Simulation</span>
+                      </>
+                    )}
                   </>
                 )}
               </button>

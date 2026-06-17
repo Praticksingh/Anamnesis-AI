@@ -28,27 +28,35 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-_api_key: str = os.environ.get("ANTHROPIC_API_KEY", "")
-_model: str = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
-_max_tokens: int = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "1024"))
+_gemini_key: str = os.environ.get("GEMINI_API_KEY", "")
+_anthropic_key: str = os.environ.get("ANTHROPIC_API_KEY", "")
 
-# Mock mode: active when there is no real API key.
-USE_MOCK: bool = not _api_key or _api_key == "your_key_here"
+# Determine Provider
+LLM_PROVIDER: str = "mock"
+if _gemini_key and _gemini_key != "your_key_here":
+    LLM_PROVIDER = "gemini"
+elif _anthropic_key and _anthropic_key != "your_key_here":
+    LLM_PROVIDER = "anthropic"
 
-if not USE_MOCK:
+USE_MOCK: bool = (LLM_PROVIDER == "mock")
+
+_model: str = ""
+_max_tokens: int = 1024
+
+_anthropic_client = None
+if LLM_PROVIDER == "gemini":
+    import google.generativeai as _genai_lib
+    _genai_lib.configure(api_key=_gemini_key)
+    _model = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+    logger.info("LLM client │ mode=REAL provider=GEMINI model=%s", _model)
+elif LLM_PROVIDER == "anthropic":
     import anthropic as _anthropic_lib
-    _client = _anthropic_lib.AsyncAnthropic(api_key=_api_key)
-    logger.info(
-        "LLM client │ mode=REAL  model=%s  max_tokens=%d",
-        _model,
-        _max_tokens,
-    )
+    _model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+    _max_tokens = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "1024"))
+    _anthropic_client = _anthropic_lib.AsyncAnthropic(api_key=_anthropic_key)
+    logger.info("LLM client │ mode=REAL provider=ANTHROPIC model=%s max_tokens=%d", _model, _max_tokens)
 else:
-    _client = None  # type: ignore[assignment]
-    logger.info(
-        "LLM client │ mode=MOCK  "
-        "(set ANTHROPIC_API_KEY to switch to real Anthropic calls)"
-    )
+    logger.info("LLM client │ mode=MOCK (set GEMINI_API_KEY or ANTHROPIC_API_KEY to switch to real calls)")
 
 
 # ── Public exception ───────────────────────────────────────────────────────────
@@ -78,13 +86,24 @@ def _parse_json(raw: str) -> dict:
 def _agent_label(system_prompt: str) -> str:
     """Derive a short agent name from the system prompt for log messages.
 
-    NOTE: 'critic' is checked before 'historian' because ``CRITIC_PROMPT``
-    contains the word 'historian' in its body — matching historian first would
-    return the wrong mock dict.
+    NOTE: 'critic', 'causal', and 'assumption' are checked before other agents
+    because their prompts contain other agent names in their bodies.
     """
     p = system_prompt.lower()
+    if "lead counterfactual researcher" in p:
+        return "qa"
+    if "structured research debate" in p:
+        return "debate"
+    if "decomposer" in p:
+        return "decomposer"
     if "orchestrator" in p or "parse" in p:
         return "orchestrator"
+    if "causal" in p:
+        return "causal"
+    if "assumption" in p:
+        return "assumption"
+    if "fact-checking" in p or "grounding" in p:
+        return "validator"
     if "critic" in p:
         return "critic"
     if "climate" in p:
@@ -97,7 +116,16 @@ def _agent_label(system_prompt: str) -> str:
         return "technology"
     if "society" in p:
         return "society"
+    if "political" in p:
+        return "political"
+    if "energy" in p:
+        return "energy"
+    if "healthcare" in p:
+        return "healthcare"
+    if "demographics" in p:
+        return "demographics"
     return "agent"
+
 
 
 # ── Mock response bank ────────────────────────────────────────────────────────
@@ -105,6 +133,14 @@ def _agent_label(system_prompt: str) -> str:
 # expects.  Used when ``USE_MOCK=True``.
 
 MOCK_RESPONSES: dict[str, dict] = {
+    "decomposer": {
+        "wikipedia": "wikipedia history timeline",
+        "worldbank": "GDP growth economic indicators",
+        "un_data": "sustainability social index",
+        "nasa": "earth science climate anomalies",
+        "noaa": "temperature precipitation records",
+        "arxiv": "simulation counterfactual model",
+    },
     "orchestrator": {
         "scenario": (
             "A hypothetical divergence where the specified historical event unfolded "
@@ -201,7 +237,28 @@ MOCK_RESPONSES: dict[str, dict] = {
             "Overall plausibility is moderate — the scenario is internally coherent but optimistic.",
         ],
     },
+    "causal": {
+        "causal_links": [
+            {"source": "ev-0", "target": "ev-1", "description": "Initial divergence acts as the primary catalyst for subsequent policy shifts."},
+            {"source": "ev-1", "target": "ev-2", "description": "Policy realignment directly drives economic and technological adaptations."}
+        ]
+    },
+    "assumption": {
+        "assumptions": [
+            {
+                "agent_name": "historian",
+                "assumption": "Assumes smooth administrative transition and low geopolitical resistance.",
+                "impact_level": "high"
+            },
+            {
+                "agent_name": "economist",
+                "assumption": "Assumes capital markets adapt to the structural divergence without prolonged recession.",
+                "impact_level": "medium"
+            }
+        ]
+    },
 }
+
 
 
 def _get_mock_critic_response(user_content: str) -> dict:
@@ -270,28 +327,37 @@ def _get_mock_critic_response(user_content: str) -> dict:
     return {
         "confidence_score": confidence,
         "confidence_explanation": confidence_explanation,
-        "risk_notes": risk_notes[:4]
+        "risk_notes": risk_notes[:4],
+        "agent_confidences": [
+            {"agent_name": "historian", "confidence_score": confidence, "explanation": "Historian sequence pacing matches expectations."},
+            {"agent_name": "economist", "confidence_score": max(0, confidence - 5), "explanation": "Economist variance is within acceptable range."}
+        ]
     }
 
 
 def _get_mock_response(system_prompt: str, user_content: str = "") -> dict:
     """Return the mock response dict that matches the given system prompt."""
     label = _agent_label(system_prompt)
-    if label == "critic" and user_content:
-        return _get_mock_critic_response(user_content)
-    return MOCK_RESPONSES.get(label, MOCK_RESPONSES["orchestrator"])
+    try:
+        from app.creative_mock import get_creative_mock_response
+        return get_creative_mock_response(label, system_prompt, user_content)
+    except Exception as exc:
+        logger.warning("Failed to get creative mock response: %s. Falling back to default mock.", exc)
+        if label == "critic" and user_content:
+            return _get_mock_critic_response(user_content)
+        return MOCK_RESPONSES.get(label, MOCK_RESPONSES["orchestrator"])
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 async def call_agent(system_prompt: str, user_content: str) -> dict:
-    """Send a structured prompt to Claude and return the parsed JSON response.
+    """Send a structured prompt to Claude/Gemini and return the parsed JSON response.
 
     Flow
     ----
     1. Identify the agent from the system prompt for logging.
     2. If ``USE_MOCK``, return the pre-built mock dict immediately.
-    3. Otherwise POST to Anthropic asynchronously and attempt JSON parse.
+    3. Otherwise POST to Anthropic/Gemini asynchronously and attempt JSON parse.
     4. On ``JSONDecodeError``, send one follow-up turn asking for pure JSON.
     5. If the retry also fails, raise ``AgentResponseError``.
 
@@ -300,15 +366,27 @@ async def call_agent(system_prompt: str, user_content: str) -> dict:
     label = _agent_label(system_prompt)
     mode = "MOCK" if USE_MOCK else "REAL"
 
+    try:
+        from app.telemetry import broadcast_log
+    except ImportError:
+        broadcast_log = None
+
     logger.info("─" * 64)
     logger.info(
         "call_agent │ agent=%-12s mode=%s", label, mode
     )
 
+    if broadcast_log:
+        import asyncio
+        asyncio.create_task(broadcast_log(f"{label.capitalize()} │ Analyzing scenario context ({mode} mode)..."))
+
     t0 = time.perf_counter()
 
     # ── Mock path ──────────────────────────────────────────────────────────────
     if USE_MOCK:
+        # Simulate slight delay in mock mode for a more organic feel
+        import asyncio
+        await asyncio.sleep(1.0)
         result = _get_mock_response(system_prompt, user_content)
         elapsed = time.perf_counter() - t0
         logger.info(
@@ -318,43 +396,78 @@ async def call_agent(system_prompt: str, user_content: str) -> dict:
             list(result.keys()),
             elapsed,
         )
+        if broadcast_log:
+            asyncio.create_task(broadcast_log(f"{label.capitalize()} │ Finished calculations successfully (elapsed={elapsed:.2f}s)."))
         return result
 
-    # ── Real Anthropic path ────────────────────────────────────────────────────
-    logger.info(
-        "call_agent │ agent=%-12s → Anthropic  model=%s  max_tokens=%d",
-        label, _model, _max_tokens,
-    )
-
-    # First attempt ────────────────────────────────────────────────────────────
-    try:
-        response = await _client.messages.create(
-            model=_model,
-            max_tokens=_max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_content}],
+    # ── Real path ────────────────────────────────────────────────────
+    if LLM_PROVIDER == "gemini":
+        logger.info(
+            "call_agent │ agent=%-12s → Gemini  model=%s",
+            label, _model,
         )
-    except Exception as exc:
-        elapsed = time.perf_counter() - t0
-        logger.error(
-            "call_agent │ agent=%-12s Anthropic request FAILED  "
-            "elapsed=%.4fs  error=%s",
-            label, elapsed, exc,
+        try:
+            import google.generativeai as _genai_lib
+            # Enforce JSON output using generation config
+            generation_config = {"response_mime_type": "application/json"}
+            model_instance = _genai_lib.GenerativeModel(
+                model_name=_model,
+                system_instruction=system_prompt,
+                generation_config=generation_config
+            )
+            response = await model_instance.generate_content_async(user_content)
+            raw_text = response.text
+            elapsed_api = time.perf_counter() - t0
+            logger.info(
+                "call_agent │ agent=%-12s response received from Gemini  "
+                "elapsed=%.4fs",
+                label, elapsed_api,
+            )
+            if broadcast_log:
+                import asyncio
+                asyncio.create_task(broadcast_log(f"{label.capitalize()} │ Response compiled successfully (elapsed={elapsed_api:.2f}s)."))
+        except Exception as exc:
+            elapsed = time.perf_counter() - t0
+            logger.error(
+                "call_agent │ agent=%-12s Gemini request FAILED  "
+                "elapsed=%.4fs  error=%s",
+                label, elapsed, exc,
+            )
+            raise AgentResponseError(f"Gemini API call failed: {exc}") from exc
+    else:
+        logger.info(
+            "call_agent │ agent=%-12s → Anthropic  model=%s  max_tokens=%d",
+            label, _model, _max_tokens,
         )
-        raise AgentResponseError(f"Anthropic API call failed: {exc}") from exc
-
-    elapsed_api = time.perf_counter() - t0
-    logger.info(
-        "call_agent │ agent=%-12s response received  "
-        "elapsed=%.4fs  stop_reason=%s  input_tokens=%d  output_tokens=%d",
-        label,
-        elapsed_api,
-        response.stop_reason,
-        response.usage.input_tokens,
-        response.usage.output_tokens,
-    )
-
-    raw_text = _extract_text(response)
+        try:
+            response = await _anthropic_client.messages.create(
+                model=_model,
+                max_tokens=_max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_content}],
+            )
+            raw_text = _extract_text(response)
+            elapsed_api = time.perf_counter() - t0
+            logger.info(
+                "call_agent │ agent=%-12s response received from Anthropic  "
+                "elapsed=%.4fs  stop_reason=%s  input_tokens=%d  output_tokens=%d",
+                label,
+                elapsed_api,
+                response.stop_reason,
+                response.usage.input_tokens,
+                response.usage.output_tokens,
+            )
+            if broadcast_log:
+                import asyncio
+                asyncio.create_task(broadcast_log(f"{label.capitalize()} │ Response compiled successfully (elapsed={elapsed_api:.2f}s)."))
+        except Exception as exc:
+            elapsed = time.perf_counter() - t0
+            logger.error(
+                "call_agent │ agent=%-12s Anthropic request FAILED  "
+                "elapsed=%.4fs  error=%s",
+                label, elapsed, exc,
+            )
+            raise AgentResponseError(f"Anthropic API call failed: {exc}") from exc
 
     try:
         result = _parse_json(raw_text)
@@ -375,51 +488,65 @@ async def call_agent(system_prompt: str, user_content: str) -> dict:
 
     # Retry: ask the model to return pure JSON ─────────────────────────────────
     logger.info(
-        "call_agent │ agent=%-12s → Anthropic  RETRY (correction turn)",
+        "call_agent │ agent=%-12s → RETRY (correction turn)",
         label,
     )
     t_retry = time.perf_counter()
 
     try:
-        retry_response = await _client.messages.create(
-            model=_model,
-            max_tokens=_max_tokens,
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_content},
-                {"role": "assistant", "content": raw_text},
-                {
-                    "role": "user",
-                    "content": (
-                        "Your previous response was not valid JSON. "
-                        "Respond with ONLY the JSON object — no markdown "
-                        "code fences, no explanation, no preamble."
-                    ),
-                },
-            ],
-        )
+        if LLM_PROVIDER == "gemini":
+            import google.generativeai as _genai_lib
+            model_instance = _genai_lib.GenerativeModel(
+                model_name=_model,
+                system_instruction=system_prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            chat = model_instance.start_chat(history=[
+                {"role": "user", "parts": [user_content]},
+                {"role": "model", "parts": [raw_text]}
+            ])
+            retry_resp = await chat.send_message_async(
+                "Your previous response was not valid JSON. "
+                "Respond with ONLY the JSON object matching the requested schema."
+            )
+            retry_raw = retry_resp.text
+        else:
+            retry_response = await _anthropic_client.messages.create(
+                model=_model,
+                max_tokens=_max_tokens,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_content},
+                    {"role": "assistant", "content": raw_text},
+                    {
+                        "role": "user",
+                        "content": (
+                            "Your previous response was not valid JSON. "
+                            "Respond with ONLY the JSON object — no markdown "
+                            "code fences, no explanation, no preamble."
+                        ),
+                    },
+                ],
+            )
+            retry_raw = _extract_text(retry_response)
     except Exception as exc:
         elapsed = time.perf_counter() - t_retry
         logger.error(
-            "call_agent │ agent=%-12s retry Anthropic request FAILED  "
+            "call_agent │ agent=%-12s retry request FAILED  "
             "elapsed=%.4fs  error=%s",
             label, elapsed, exc,
         )
         raise AgentResponseError(
-            f"Anthropic retry API call failed: {exc}"
+            f"Retry API call failed: {exc}"
         ) from exc
 
     elapsed_retry = time.perf_counter() - t_retry
     logger.info(
         "call_agent │ agent=%-12s retry response received  "
-        "elapsed=%.4fs  input_tokens=%d  output_tokens=%d",
+        "elapsed=%.4fs",
         label,
         elapsed_retry,
-        retry_response.usage.input_tokens,
-        retry_response.usage.output_tokens,
     )
-
-    retry_raw = _extract_text(retry_response)
 
     try:
         result = _parse_json(retry_raw)

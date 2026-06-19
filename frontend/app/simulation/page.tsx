@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { History, Globe, TrendingUp, Cpu, Users, Landmark, Orbit, ArrowRight, Play, Terminal, GitBranch, ArrowLeft } from "lucide-react";
 import { createScenario, branchScenario, getScenarioReport } from "../../lib/api";
@@ -31,7 +31,7 @@ const TEMPLATES = [
   { category: "space", text: "What if the space race reached Mars by 1980?", label: "Early Mars Colonization" }
 ];
 
-export default function SimulationConfigPage() {
+function SimulationConfigContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -283,5 +283,17 @@ export default function SimulationConfigPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SimulationConfigPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <span className="text-cyan-400 font-mono animate-pulse">Initializing Lab...</span>
+      </div>
+    }>
+      <SimulationConfigContent />
+    </Suspense>
   );
 }

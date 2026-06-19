@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,9 +11,12 @@ import {
 } from "lucide-react";
 
 import CanvasParticles from "../components/CanvasParticles";
-import WorldMap from "../components/WorldMap";
+import HeroNebula from "../components/HeroNebula";
+import InfiniteTimeline from "../components/InfiniteTimeline";
 import { MOCK_SCENARIOS } from "../lib/mockScenarios";
 import { createScenario } from "../lib/api";
+import { gsap } from "gsap";
+import { useReducedMotion } from "../utils/useReducedMotion";
 
 const AGENT_SHOWCASE = [
   {
@@ -95,6 +98,25 @@ export default function LandingPage() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [activeTab, setActiveTab] = useState("historian");
   const [carouselIndex, setCarouselIndex] = useState(0);
+  
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reducedMotion) {
+      if (heroRef.current) gsap.set(heroRef.current, { opacity: 1 });
+      return;
+    }
+    const el = heroRef.current;
+    if (el) {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: -30 },
+        { opacity: 1, y: 0, duration: 1, ease: "power2.out" }
+      );
+    }
+  }, [reducedMotion]);
 
   const activeAgent = AGENT_SHOWCASE.find((a) => a.key === activeTab) || AGENT_SHOWCASE[0];
   const ActiveIcon = activeAgent.icon;
@@ -130,8 +152,8 @@ export default function LandingPage() {
       {/* ──────────────────────────────
           SECTION 1: HERO (ABOVE THE FOLD)
           ────────────────────────────── */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 pt-16 pb-12 overflow-hidden border-b border-white/5">
-        <WorldMap />
+      <section ref={heroRef} className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 pt-16 pb-12 overflow-hidden border-b border-white/5 opacity-0">
+        <HeroNebula />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[550px] h-[550px] ambient-glow pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl text-center space-y-8 animate-fade-in-up mt-8">
@@ -178,6 +200,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <InfiniteTimeline />
 
       {/* ──────────────────────────────
           SECTION 2: WHAT IS ANAMNESIS-AI?
@@ -466,3 +490,4 @@ export default function LandingPage() {
     </main>
   );
 }
+

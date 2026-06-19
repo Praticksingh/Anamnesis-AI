@@ -7,6 +7,7 @@ import {
   Terminal, Activity, BookOpen, Layers, Milestone, Compass, Users, Home, Search 
 } from "lucide-react";
 import CommandPalette from "./CommandPalette";
+import SoundToggle from "./SoundToggle";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -95,6 +96,7 @@ export default function Navbar() {
               >
                 Launch Lab
               </Link>
+              <SoundToggle />
             </div>
           </div>
         </div>

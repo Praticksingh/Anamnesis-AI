@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/theme.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FloatingLauncher from "../components/FloatingLauncher";
@@ -16,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="flex min-h-screen flex-col bg-black text-slate-100 selection:bg-cyan-500/20">
+      <body className="flex min-h-screen flex-col bg-[var(--c-space)] text-slate-100 selection:bg-cyan-500/20">
         <Navbar />
         {/* Padding top to offset the fixed header */}
         <div className="flex-grow pt-16">

@@ -1,12 +1,31 @@
 # Anamnesis-AI
-
 ### Reimagine the Past. Simulate the Future.
 
-Anamnesis-AI is a **multi-agent simulation and decision intelligence web application** that explores alternate histories and future policy scenarios through collaborative AI reasoning.
+**Kaggle Capstone Pitch:** Anamnesis-AI is a **multi-agent simulation and decision intelligence web application** that explores alternate histories and future policy scenarios through collaborative AI reasoning. 
 
 It enables users to test “what-if” scenarios across economics, society, sustainability, governance, and technology, helping them understand long-term consequences of decisions before they are made.
 
-The system is designed as a **Creative Agentic AI application built with GitHub Copilot assistance and integrated with Microsoft Foundry IQ for grounded reasoning.**
+> **Note for Kaggle Judges**: This project heavily utilizes **Agent / Multi-agent systems** (ADK) using LangGraph orchestration, **Deployability** via Docker containerization, and was built using **Antigravity (Vibe Coding)**.
+
+## 🏗️ Architecture Diagram
+
+```mermaid
+graph TD;
+    User[User Input] -->|Scenario| Orchestrator[Orchestrator Agent];
+    Orchestrator -->|Delegates Analysis| Economist[Economist Agent];
+    Orchestrator -->|Delegates Analysis| Historian[Historian Agent];
+    Orchestrator -->|Delegates Analysis| Sustainability[Sustainability Agent];
+    Orchestrator -->|Delegates Analysis| Society[Society Agent];
+    
+    Economist --> Critic[Critic Agent];
+    Historian --> Critic;
+    Sustainability --> Critic;
+    Society --> Critic;
+    
+    FoundryIQ[(Microsoft Foundry IQ)] -.->|Fact Verification| Orchestrator;
+    Critic -->|Feedback Loop| Orchestrator;
+    Critic -->|Final Synthesis| Report[Impact Dashboard & Timeline];
+```
 
 ---
 

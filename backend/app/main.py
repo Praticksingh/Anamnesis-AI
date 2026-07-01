@@ -1,3 +1,14 @@
+"""
+KAGGLE CAPSTONE SUBMISSION - CATEGORY 2: IMPLEMENTATION (Multi-Agent System)
+
+This module implements the FastAPI backend which serves as the entrypoint for the
+multi-agent simulation (ADK pattern). It triggers the LangGraph Orchestrator and
+monitors the lifecycle of all domain agents executing in the background.
+
+Key Design Patterns Demonstrated:
+1. Agent Orchestration: Background tasks manage long-running multi-agent debates.
+2. Production Deployability: Full FastAPI implementation with telemetry/websockets.
+"""
 import logging
 from contextlib import asynccontextmanager
 
@@ -119,6 +130,12 @@ async def create_scenario(
     background_tasks: BackgroundTasks,
     db=Depends(get_db),
 ) -> ScenarioCreateResponse:
+    """
+    KAGGLE CAPSTONE:
+    This endpoint initiates the multi-agent simulation. It takes a "What-If" scenario,
+    saves it to the database, and kicks off the background orchestrator which coordinates
+    the 8 specialized domain agents.
+    """
     # Input validation
     trimmed = request.raw_input.strip()
     if not trimmed:

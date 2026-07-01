@@ -16,6 +16,7 @@ import type { FinalReport, UnifiedTimelineEvent, AgentOutputSummary } from "../.
 // Import our advanced custom visual components
 import AnimatedGauges from "../../../components/AnimatedGauges";
 import InteractiveTimeline from "../../../components/InteractiveTimeline";
+import DecisionTree from "../../../components/DecisionTree";
 import CausalGraph from "../../../components/CausalGraph";
 import ImpactMap from "../../../components/ImpactMap";
 
@@ -168,7 +169,7 @@ export default function ReportPage() {
   const [report, setReport] = useState<FinalReport | null>(null);
   const [error, setError] = useState("");
   const [shareStatus, setShareStatus] = useState("Share Report");
-  const [activeTab, setActiveTab] = useState<"synthesis" | "timeline" | "causal" | "discussions" | "sources">("synthesis");
+  const [activeTab, setActiveTab] = useState<"synthesis" | "timeline" | "tree" | "causal" | "discussions" | "sources">("synthesis");
 
   const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
 
@@ -259,6 +260,7 @@ export default function ReportPage() {
   const tabs = [
     { id: "synthesis", label: "Executive Synthesis", icon: FileText },
     { id: "timeline", label: "Interactive Chronology", icon: Clock },
+    { id: "tree", label: "Divergence Tree", icon: GitBranch },
     { id: "causal", label: "Causal DAG Graph", icon: GitBranch },
     { id: "discussions", label: "Domain Briefings", icon: MessageSquare },
     { id: "sources", label: "Consulted Sources", icon: BookOpen },
@@ -378,6 +380,21 @@ export default function ReportPage() {
               <InteractiveTimeline
                 events={sortedTimeline}
                 validations={report.grounding_validations || []}
+                onBranch={(event) => {
+                  const eventId = event.id || `${event.year}`;
+                  router.push(`/simulation?parent_id=${id}&event_id=${eventId}`);
+                }}
+              />
+            </div>
+          )}
+
+          {/* TAB 3: DIVERGENCE TREE */}
+          {activeTab === "tree" && (
+            <div className="animate-fade-in">
+              <DecisionTree
+                scenarioId={id}
+                events={sortedTimeline}
+                links={report.causal_graph || []}
                 onBranch={(event) => {
                   const eventId = event.id || `${event.year}`;
                   router.push(`/simulation?parent_id=${id}&event_id=${eventId}`);

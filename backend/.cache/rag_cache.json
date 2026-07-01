@@ -1127,5 +1127,325 @@
         "url": "https://api.nasa.gov"
       }
     }
+  ],
+  "wikipedia:ca8280071d8b3a0160d2744e4f41d92d": [],
+  "arxiv:b62334e4445535d2b092549cf4d76c7f": [],
+  "un_data:b446e5aa7f85f70021e5efbfd71b0a2a": [
+    {
+      "__class__": "Document",
+      "id": "un-sdg-1",
+      "content": "UN SDG Goal 1 — End poverty in all its forms everywhere: Goal 1 calls for an end to poverty in all its manifestations, including extreme poverty, over the next 15 years. All people everywhere, including the poorest and most vulnerable, should enjoy a basic standard of living and social protection benefits.",
+      "metadata": {
+        "title": "UN SDG: Goal 1",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-2",
+      "content": "UN SDG Goal 2 — End hunger, achieve food security and improved nutrition and promote sustainable agriculture: Goal 2 seeks to end hunger and all forms of malnutrition and to achieve sustainable food production by 2030. It is premised on the idea that everyone should have access to sufficient nutritious food, which will require widespread promotion of sustainable agriculture, a doubling of agricultural productivity, increased investments and properly functioning food markets.",
+      "metadata": {
+        "title": "UN SDG: Goal 2",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-3",
+      "content": "UN SDG Goal 3 — Ensure healthy lives and promote well-being for all at all ages: Goal 3 aims to ensure health and well-being for all at all ages by improving reproductive, maternal and child health; ending the epidemics of major communicable diseases; reducing non-communicable and environmental diseases; achieving universal health coverage; and ensuring access to safe, affordable and effective medicines and vaccines for all.",
+      "metadata": {
+        "title": "UN SDG: Goal 3",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    }
+  ],
+  "worldbank:8fbffc13efc019fcbb8a4e717c70f639": [
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-0",
+      "content": "In 1990, the United States GDP was 5.96 trillion USD. Globally, total economic output was estimated at 22.8 trillion USD.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-1",
+      "content": "In 2010, China's GDP surpassed Japan to reach 6.09 trillion USD, shifting geopolitical and trade hubs toward Asia.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-2",
+      "content": "Historical estimates suggest Rome at its peak (150 AD) had a gross empire-product equivalent to ~20 billion USD in modern purchasing power.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    }
+  ],
+  "noaa:6067ee1e7e957f15d5d713fa07f17abc": [
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-0",
+      "content": "NOAA National Centers for Environmental Information (NCEI) records confirm the global land and ocean surface temperature for 2020 was 0.98°C above the 20th-century average.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-1",
+      "content": "Regional temperature anomalies in Europe indicate the Roman Warm Period (250 BC - 400 AD) was characterized by stable, warm summer indices.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    }
+  ],
+  "nasa:6067ee1e7e957f15d5d713fa07f17abc": [
+    {
+      "__class__": "Document",
+      "id": "nasa-apod-today",
+      "content": "NASA Planetary Feed — Longmore 8: The Hamster Wheel Nebula: How did a hamster wheel get into space? The Hamster Wheel Nebula (Longmore 8) was discovered by Andrew Longmore in 1976 as a part of a larger survey of the southern sky. This survey employed several improvements in photographic technology, including the use of highly sensitive film, to capture deeper and fainter objects on plates that were examined by eye and catalogued. The featured image, taken ...",
+      "metadata": {
+        "title": "NASA APOD: Longmore 8: The Hamster Wheel Nebula",
+        "source": "NASA",
+        "url": "https://apod.nasa.gov/apod/image/2606/hamster.jpg"
+      }
+    }
+  ],
+  "wikipedia:b5a4751a7763387b49fa46c9a9201c74": [],
+  "arxiv:241c914ce05069e35121499f3f20416d": [],
+  "worldbank:263dd89c024d0426b8f316ec622ef65e": [
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-0",
+      "content": "In 1990, the United States GDP was 5.96 trillion USD. Globally, total economic output was estimated at 22.8 trillion USD.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-1",
+      "content": "In 2010, China's GDP surpassed Japan to reach 6.09 trillion USD, shifting geopolitical and trade hubs toward Asia.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-2",
+      "content": "Historical estimates suggest Rome at its peak (150 AD) had a gross empire-product equivalent to ~20 billion USD in modern purchasing power.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    }
+  ],
+  "un_data:1709342aa4eaf3ea778d1e314015be64": [
+    {
+      "__class__": "Document",
+      "id": "un-sdg-1",
+      "content": "UN SDG Goal 1 — End poverty in all its forms everywhere: Goal 1 calls for an end to poverty in all its manifestations, including extreme poverty, over the next 15 years. All people everywhere, including the poorest and most vulnerable, should enjoy a basic standard of living and social protection benefits.",
+      "metadata": {
+        "title": "UN SDG: Goal 1",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-2",
+      "content": "UN SDG Goal 2 — End hunger, achieve food security and improved nutrition and promote sustainable agriculture: Goal 2 seeks to end hunger and all forms of malnutrition and to achieve sustainable food production by 2030. It is premised on the idea that everyone should have access to sufficient nutritious food, which will require widespread promotion of sustainable agriculture, a doubling of agricultural productivity, increased investments and properly functioning food markets.",
+      "metadata": {
+        "title": "UN SDG: Goal 2",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-3",
+      "content": "UN SDG Goal 3 — Ensure healthy lives and promote well-being for all at all ages: Goal 3 aims to ensure health and well-being for all at all ages by improving reproductive, maternal and child health; ending the epidemics of major communicable diseases; reducing non-communicable and environmental diseases; achieving universal health coverage; and ensuring access to safe, affordable and effective medicines and vaccines for all.",
+      "metadata": {
+        "title": "UN SDG: Goal 3",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    }
+  ],
+  "noaa:5ff15c875496edfeb489ed30aeaf6558": [
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-0",
+      "content": "NOAA National Centers for Environmental Information (NCEI) records confirm the global land and ocean surface temperature for 2020 was 0.98°C above the 20th-century average.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-1",
+      "content": "Regional temperature anomalies in Europe indicate the Roman Warm Period (250 BC - 400 AD) was characterized by stable, warm summer indices.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    }
+  ],
+  "nasa:5ff15c875496edfeb489ed30aeaf6558": [
+    {
+      "__class__": "Document",
+      "id": "nasa-mock-temperature-0",
+      "content": "NASA GISS (Goddard Institute for Space Studies) climate surface temperature index registers a global heating deviation of 1.1°C relative to 1950 baseline levels.",
+      "metadata": {
+        "title": "NASA Earth Science: Temperature Record",
+        "source": "NASA",
+        "url": "https://api.nasa.gov"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "nasa-mock-temperature-1",
+      "content": "In simulations tracking the greening of the Sahara, Earth system modeling maps a global albedo change, lowering continental temperature indexes by 0.3°C.",
+      "metadata": {
+        "title": "NASA Earth Science: Temperature Record",
+        "source": "NASA",
+        "url": "https://api.nasa.gov"
+      }
+    }
+  ],
+  "wikipedia:63887c4098b85ef2c21c5389642b20b0": [],
+  "arxiv:88f978a66a75e64188f5e7317daecc94": [],
+  "worldbank:9d8dfbc10714c9c84bd2213e168bca3e": [
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-0",
+      "content": "In 1990, the United States GDP was 5.96 trillion USD. Globally, total economic output was estimated at 22.8 trillion USD.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-1",
+      "content": "In 2010, China's GDP surpassed Japan to reach 6.09 trillion USD, shifting geopolitical and trade hubs toward Asia.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "wb-mock-gdp-2",
+      "content": "Historical estimates suggest Rome at its peak (150 AD) had a gross empire-product equivalent to ~20 billion USD in modern purchasing power.",
+      "metadata": {
+        "title": "World Bank: GDP (current US$) Estimate",
+        "source": "World Bank",
+        "url": "http://api.worldbank.org"
+      }
+    }
+  ],
+  "un_data:854b1f33641f1ecfa2a188ce2e6f0d07": [
+    {
+      "__class__": "Document",
+      "id": "un-sdg-1",
+      "content": "UN SDG Goal 1 — End poverty in all its forms everywhere: Goal 1 calls for an end to poverty in all its manifestations, including extreme poverty, over the next 15 years. All people everywhere, including the poorest and most vulnerable, should enjoy a basic standard of living and social protection benefits.",
+      "metadata": {
+        "title": "UN SDG: Goal 1",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-2",
+      "content": "UN SDG Goal 2 — End hunger, achieve food security and improved nutrition and promote sustainable agriculture: Goal 2 seeks to end hunger and all forms of malnutrition and to achieve sustainable food production by 2030. It is premised on the idea that everyone should have access to sufficient nutritious food, which will require widespread promotion of sustainable agriculture, a doubling of agricultural productivity, increased investments and properly functioning food markets.",
+      "metadata": {
+        "title": "UN SDG: Goal 2",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "un-sdg-3",
+      "content": "UN SDG Goal 3 — Ensure healthy lives and promote well-being for all at all ages: Goal 3 aims to ensure health and well-being for all at all ages by improving reproductive, maternal and child health; ending the epidemics of major communicable diseases; reducing non-communicable and environmental diseases; achieving universal health coverage; and ensuring access to safe, affordable and effective medicines and vaccines for all.",
+      "metadata": {
+        "title": "UN SDG: Goal 3",
+        "source": "UN Data",
+        "url": "https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?compact=true"
+      }
+    }
+  ],
+  "noaa:1101c7c9cadd3fb240b3193c0cd30a5e": [
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-0",
+      "content": "NOAA National Centers for Environmental Information (NCEI) records confirm the global land and ocean surface temperature for 2020 was 0.98°C above the 20th-century average.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "noaa-mock-temperature-1",
+      "content": "Regional temperature anomalies in Europe indicate the Roman Warm Period (250 BC - 400 AD) was characterized by stable, warm summer indices.",
+      "metadata": {
+        "title": "NOAA NCEI: Temperature Record",
+        "source": "NOAA",
+        "url": "https://www.ncdc.noaa.gov"
+      }
+    }
+  ],
+  "nasa:1101c7c9cadd3fb240b3193c0cd30a5e": [
+    {
+      "__class__": "Document",
+      "id": "nasa-mock-temperature-0",
+      "content": "NASA GISS (Goddard Institute for Space Studies) climate surface temperature index registers a global heating deviation of 1.1°C relative to 1950 baseline levels.",
+      "metadata": {
+        "title": "NASA Earth Science: Temperature Record",
+        "source": "NASA",
+        "url": "https://api.nasa.gov"
+      }
+    },
+    {
+      "__class__": "Document",
+      "id": "nasa-mock-temperature-1",
+      "content": "In simulations tracking the greening of the Sahara, Earth system modeling maps a global albedo change, lowering continental temperature indexes by 0.3°C.",
+      "metadata": {
+        "title": "NASA Earth Science: Temperature Record",
+        "source": "NASA",
+        "url": "https://api.nasa.gov"
+      }
+    }
   ]
 }

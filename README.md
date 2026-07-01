@@ -1,11 +1,11 @@
 # Anamnesis-AI
 ### Reimagine the Past. Simulate the Future.
 
-**Kaggle Capstone Pitch:** Anamnesis-AI is a **multi-agent simulation and decision intelligence web application** that explores alternate histories and future policy scenarios through collaborative AI reasoning. 
+Anamnesis-AI is a **multi-agent simulation and decision intelligence web application** that explores alternate histories and future policy scenarios through collaborative AI reasoning. 
 
 It enables users to test “what-if” scenarios across economics, society, sustainability, governance, and technology, helping them understand long-term consequences of decisions before they are made.
 
-> **Note for Kaggle Judges**: This project heavily utilizes **Agent / Multi-agent systems** (ADK) using LangGraph orchestration, **Deployability** via Docker containerization, and was built using **Antigravity (Vibe Coding)**.
+> This project heavily utilizes **Agent / Multi-agent systems** (ADK) using LangGraph orchestration, **Deployability** via Docker containerization, and was built using **Antigravity (Vibe Coding)**.
 
 ## 🏗️ Architecture Diagram
 
@@ -29,29 +29,7 @@ graph TD;
 
 ---
 
-# 🎯 Challenge Alignment (Agents League – Creative Apps)
-
-This project is built specifically for the **Microsoft Agents League Creative Apps track**, fulfilling all core requirements:
-
-### ✔ GitHub Copilot Usage (Required)
-
-* Copilot used for:
-
-  * Code generation (frontend + backend)
-  * Debugging agent workflows
-  * Prompt design for multi-agent system
-* Copilot Chat used for:
-
-  * Iterating agent prompts
-  * Structuring orchestration logic
-* Development accelerated via AI-assisted coding workflow
-
-### ✔ Microsoft IQ Integration (Required)
-
-Anamnesis-AI integrates:
-
-#### 🧠 Foundry IQ (Primary)
-
+Anamnesis-AI:
 * Grounds agent reasoning in **real-world datasets and knowledge sources**
 * Retrieves:
 
@@ -59,12 +37,6 @@ Anamnesis-AI integrates:
   * Economic indicators
   * Policy documents
 * Ensures responses are **cited, contextual, and less hallucinated**
-
-#### 📊 Optional Extensions (Architecture Ready)
-
-* Fabric IQ → for structured economic/sustainability datasets
-* Work IQ → for organizational/policy context simulation (future extension)
-
 ---
 
 # 🧠 Core Idea
@@ -116,7 +88,7 @@ But these perspectives are rarely combined into a single simulation.
 
 ### 💰 Economist Agent
 
-* Simulates GDP, trade, employment, inflation impact
+* Simulates GDP, trade, employment, and inflation impact
 
 ---
 
@@ -144,7 +116,7 @@ But these perspectives are rarely combined into a single simulation.
 
 ---
 
-### 🔎 Fact Verification Agent (Foundry IQ powered)
+### 🔎 Fact Verification Agent 
 
 * Retrieves grounded knowledge
 * Validates assumptions using real datasets
@@ -192,11 +164,7 @@ To ensure grounded reasoning, Anamnesis-AI uses:
 
 ---
 
-# 🧠 Microsoft IQ Integration
-
-### Foundry IQ (Mandatory Core Component)
-
-Used for:
+# Used for:
 
 * Context retrieval for historical events
 * Economic and policy grounding
@@ -234,6 +202,7 @@ Used for:
 * Data-driven decision systems
 * Full-stack AI application development
 * Explainable AI (XAI)
+* Required Environment
 
 ---
 
@@ -253,7 +222,7 @@ It enables users to:
 
 # ⚠️ Disclaimer
 
-Anamnesis-AI provides simulated, AI-generated outcomes based on available data and probabilistic reasoning. It is intended for educational and exploratory purposes only and should not be treated as factual prediction or guaranteed forecasting.
+Anamnesis-AI provides simulated, AI-generated outcomes based on available data and probabilistic reasoning. It is intended for educational and exploratory purposes only and should not be treated as a factual prediction or guaranteed forecasting.
 
 ---
 

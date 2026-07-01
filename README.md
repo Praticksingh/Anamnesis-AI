@@ -22,7 +22,7 @@ graph TD;
     Sustainability --> Critic;
     Society --> Critic;
     
-    FoundryIQ[(Microsoft Foundry IQ)] -.->|Fact Verification| Orchestrator;
+    FoundryIQ[(RAG / Fact Grounding)] -.->|Grounded Context| Orchestrator;
     Critic -->|Feedback Loop| Orchestrator;
     Critic -->|Final Synthesis| Report[Impact Dashboard & Timeline];
 ```
